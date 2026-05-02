@@ -4,6 +4,6 @@ dockerfilePath = "backend/FiltCar.Api/Dockerfile"
 
 [deploy]
 startCommand = "dotnet FiltCar.Api.dll"
-healthcheckPath = "/api/auth/me"
+healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
