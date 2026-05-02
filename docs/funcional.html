@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FiltCar — Especificación Funcional</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .page { max-width: 1000px; margin: 0 auto; }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+      border-radius: 20px;
+      padding: 48px 40px;
+      color: white;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      background: rgba(167,243,208,0.1);
+      border-radius: 50%;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(167,243,208,0.2);
+      color: #6ee7b7;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(110,231,183,0.2);
+    }
+    .header h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .header p  { color: #a7f3d0; font-size: 15px; }
+
+    /* SECTION */
+    section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+    /* ROLES */
+    .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .role-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid #e2e8f0;
+    }
+    .role-card .role-icon { font-size: 32px; margin-bottom: 12px; }
+    .role-card h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .role-card .role-sub { font-size: 11px; color: #94a3b8; margin-bottom: 14px; }
+    .role-perm {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+      padding: 5px 0;
+      border-bottom: 1px solid #f8fafc;
+    }
+    .role-perm:last-child { border-bottom: none; }
+    .role-perm .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: #10b981; }
+    .dot-blue   { background: #3b82f6; }
+    .dot-purple { background: #8b5cf6; }
+
+    /* MODULES */
+    .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .module-card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+    .module-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .module-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .module-header h3 { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .module-header p  { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .rf-list { padding: 12px 0; }
+    .rf-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 20px;
+      font-size: 12.5px;
+      color: #374151;
+      border-bottom: 1px solid #f8fafc;
+      line-height: 1.5;
+    }
+    .rf-item:last-child { border-bottom: none; }
+    .rf-code {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: monospace;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 2px 7px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* COLOR VARIANTS */
+    .m-articulos  .module-header { background: #eff6ff; }
+    .m-articulos  .module-icon   { background: #dbeafe; }
+    .m-clientes   .module-header { background: #f0fdf4; }
+    .m-clientes   .module-icon   { background: #dcfce7; }
+    .m-proveedores .module-header { background: #fdf4ff; }
+    .m-proveedores .module-icon  { background: #fae8ff; }
+    .m-empleados  .module-header { background: #fff7ed; }
+    .m-empleados  .module-icon   { background: #ffedd5; }
+    .m-ventas     .module-header { background: #fefce8; }
+    .m-ventas     .module-icon   { background: #fef9c3; }
+    .m-presupuestos .module-header { background: #f0f9ff; }
+    .m-presupuestos .module-icon { background: #e0f2fe; }
+    .m-caja       .module-header { background: #fff1f2; }
+    .m-caja       .module-icon   { background: #ffe4e6; }
+    .m-compras    .module-header { background: #f7fee7; }
+    .m-compras    .module-icon   { background: #ecfccb; }
+    .m-informes   .module-header { background: #fdf2f8; }
+    .m-informes   .module-icon   { background: #fce7f3; }
+
+    /* ENTITIES */
+    .entities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .entity-card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      border: 1px solid #e2e8f0;
+    }
+    .entity-card h4 { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
+    .entity-field {
+      font-size: 11.5px;
+      color: #64748b;
+      padding: 3px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .entity-field::before { content: '—'; color: #cbd5e1; }
+
+    /* PAYMENT METHODS */
+    .pay-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .pay-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+    }
+    .pay-icon { font-size: 28px; margin-bottom: 10px; }
+    .pay-name { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .pay-desc { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+
+    /* NON-FUNCTIONAL */
+    .nf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .nf-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      gap: 14px;
+    }
+    .nf-num {
+      font-size: 22px;
+      font-weight: 900;
+      color: #e2e8f0;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .nf-card h4 { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .nf-card p  { font-size: 12px; color: #64748b; line-height: 1.7; }
+
+    /* ROADMAP */
+    .roadmap { display: flex; flex-direction: column; gap: 0; }
+    .roadmap-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 16px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .roadmap-item:last-child { border-bottom: none; }
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #0f172a;
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .roadmap-item h4 { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .roadmap-item p  { font-size: 12px; color: #64748b; line-height: 1.6; }
+    .roadmap-wrap { background: white; border-radius: 16px; padding: 10px 24px; border: 1px solid #e2e8f0; }
+
+    /* TAG */
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin: 2px 2px 0 0;
+    }
+    .tag-green  { background: #f0fdf4; color: #16a34a; }
+    .tag-blue   { background: #eff6ff; color: #2563eb; }
+    .tag-red    { background: #fef2f2; color: #dc2626; }
+    .tag-amber  { background: #fffbeb; color: #d97706; }
+    .tag-gray   { background: #f8fafc; color: #475569; }
+
+    .footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge">Especificación Funcional — POC</div>
+    <h1>Lubricentro FILT-CAR</h1>
+    <p>Módulos, requerimientos funcionales, entidades y flujos del sistema</p>
+  </div>
+
+  <!-- ROLES -->
+  <section>
+    <p class="section-title">Roles del sistema</p>
+    <div class="roles-grid">
+      <div class="role-card">
+        <div class="role-icon">👑</div>
+        <h3>Administrador</h3>
+        <div class="role-sub">Acceso total al sistema</div>
+        <div class="role-perm"><span class="dot dot-green"></span>Todas las funciones</div>
+        <div class="role-perm"><span class="dot dot-green"></span>ABM Empleados</div>
+        <div class="role-perm"><span class="dot dot-green"></span>Informes completos</div>
+        <div class="role-perm"><span class="dot dot-green"></span>Gestión de caja</div>
+        <div class="role-perm"><span class="dot dot-green"></span>Compras y pagos</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🗂️</div>
+        <h3>Empleado Administrativo</h3>
+        <div class="role-sub">Gestión y consultas</div>
+        <div class="role-perm"><span class="dot dot-blue"></span>ABM Clientes</div>
+        <div class="role-perm"><span class="dot dot-blue"></span>ABM Proveedores</div>
+        <div class="role-perm"><span class="dot dot-blue"></span>ABM Artículos</div>
+        <div class="role-perm"><span class="dot dot-blue"></span>Consultas e informes</div>
+        <div class="role-perm"><span class="dot dot-blue"></span>Presupuestos</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">💼</div>
+        <h3>Empleado Ventas</h3>
+        <div class="role-sub">Operaciones diarias</div>
+        <div class="role-perm"><span class="dot dot-purple"></span>ABM Clientes</div>
+        <div class="role-perm"><span class="dot dot-purple"></span>ABM Artículos</div>
+        <div class="role-perm"><span class="dot dot-purple"></span>Ventas y cobros</div>
+        <div class="role-perm"><span class="dot dot-purple"></span>Compras y pagos</div>
+        <div class="role-perm"><span class="dot dot-purple"></span>Consultas básicas</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÓDULOS FUNCIONALES -->
+  <section>
+    <p class="section-title">Módulos funcionales (RF001 – RF029)</p>
+    <div class="modules-grid">
+
+      <!-- ARTÍCULOS -->
+      <div class="module-card m-articulos">
+        <div class="module-header">
+          <div class="module-icon">📦</div>
+          <div>
+            <h3>Artículos</h3>
+            <p>Inventario y stock</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF001</span>Agregar nuevo artículo</div>
+          <div class="rf-item"><span class="rf-code">RF002</span>Modificar artículo existente</div>
+          <div class="rf-item"><span class="rf-code">RF003</span>Eliminar artículo</div>
+          <div class="rf-item"><span class="rf-code">RF013</span>Buscar por marca, modelo, descripción o stock</div>
+          <div class="rf-item"><span class="rf-code">RF014</span>Consultar stock de un artículo específico</div>
+          <div class="rf-item"><span class="rf-code">RF015</span>Informe de disponibilidad de todos los productos</div>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div class="module-card m-clientes">
+        <div class="module-header">
+          <div class="module-icon">👤</div>
+          <div>
+            <h3>Clientes</h3>
+            <p>ABM y cuenta corriente</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF004</span>Agregar nuevo cliente</div>
+          <div class="rf-item"><span class="rf-code">RF005</span>Modificar cliente</div>
+          <div class="rf-item"><span class="rf-code">RF006</span>Eliminar cliente</div>
+          <div class="rf-item"><span class="rf-code">RF019</span>Registrar deuda de un cliente</div>
+          <div class="rf-item"><span class="rf-code">RF020</span>Registrar cobro de deuda a cliente particular</div>
+          <div class="rf-item"><span class="rf-code">RF018</span>Aplicar descuentos a clientes particulares en ventas</div>
+        </div>
+      </div>
+
+      <!-- PROVEEDORES -->
+      <div class="module-card m-proveedores">
+        <div class="module-header">
+          <div class="module-icon">🏭</div>
+          <div>
+            <h3>Proveedores</h3>
+            <p>ABM y pagos</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF007</span>Agregar nuevo proveedor</div>
+          <div class="rf-item"><span class="rf-code">RF008</span>Modificar proveedor</div>
+          <div class="rf-item"><span class="rf-code">RF009</span>Eliminar proveedor</div>
+          <div class="rf-item"><span class="rf-code">RF024</span>Realizar pago a proveedor (múltiples compras pendientes simultáneas)</div>
+        </div>
+      </div>
+
+      <!-- EMPLEADOS -->
+      <div class="module-card m-empleados">
+        <div class="module-header">
+          <div class="module-icon">👷</div>
+          <div>
+            <h3>Empleados</h3>
+            <p>Usuarios del sistema</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF010</span>Agregar nuevo empleado con rol</div>
+          <div class="rf-item"><span class="rf-code">RF011</span>Eliminar empleado</div>
+          <div class="rf-item"><span class="rf-code">RF012</span>Modificar empleado</div>
+        </div>
+      </div>
+
+      <!-- VENTAS -->
+      <div class="module-card m-ventas">
+        <div class="module-header">
+          <div class="module-icon">💰</div>
+          <div>
+            <h3>Ventas</h3>
+            <p>El módulo más complejo</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF017</span>Registrar venta con múltiples formas de pago</div>
+          <div class="rf-item"><span class="rf-code">RF017</span>Si el cliente no paga o paga parcialmente → queda como deuda (cuenta corriente)</div>
+          <div class="rf-item"><span class="rf-code">RF018</span>Aplicar descuentos a clientes particulares</div>
+          <div class="rf-item"><span class="rf-code">RF019</span>Generar deuda si el cobro es parcial o nulo</div>
+        </div>
+      </div>
+
+      <!-- PRESUPUESTOS -->
+      <div class="module-card m-presupuestos">
+        <div class="module-header">
+          <div class="module-icon">📋</div>
+          <div>
+            <h3>Presupuestos</h3>
+            <p>Con vencimiento automático</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF025</span>Registrar presupuesto con fecha de vencimiento</div>
+          <div class="rf-item"><span class="rf-code">RF025</span>Presupuestos vencidos se eliminan automáticamente</div>
+          <div class="rf-item"><span class="rf-code">RF029</span>Consultar y validar presupuestos por fecha</div>
+          <div class="rf-item"><span class="rf-code">RF028</span>Consultar presupuestos emitidos desde apertura de caja</div>
+        </div>
+      </div>
+
+      <!-- CAJA -->
+      <div class="module-card m-caja">
+        <div class="module-header">
+          <div class="module-icon">🏦</div>
+          <div>
+            <h3>Caja</h3>
+            <p>Control diario de efectivo</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF016</span>Registrar apertura de caja</div>
+          <div class="rf-item"><span class="rf-code">RF017</span>Registrar cierre de caja</div>
+          <div class="rf-item"><span class="rf-code">RF017</span>Registrar arqueo diario</div>
+          <div class="rf-item"><span class="rf-code">RF023</span>Registrar retiro de dinero de caja</div>
+          <div class="rf-item"><span class="rf-code">RF028</span>Consultar aperturas, cierres y arqueos por fecha</div>
+        </div>
+      </div>
+
+      <!-- COMPRAS -->
+      <div class="module-card m-compras">
+        <div class="module-header">
+          <div class="module-icon">🛒</div>
+          <div>
+            <h3>Compras</h3>
+            <p>Órdenes a proveedores</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF021</span>Registrar compra a proveedor (pago inmediato o diferido)</div>
+          <div class="rf-item"><span class="rf-code">RF022</span>Registrar pagos varios a proveedores (puede ser a varios simultáneamente)</div>
+          <div class="rf-item"><span class="rf-code">RF023</span>Registrar retiro de dinero de caja (asociado a compras)</div>
+          <div class="rf-item"><span class="rf-code">RF024</span>Compra y pago pueden registrarse de forma simultánea o diferida</div>
+        </div>
+      </div>
+
+      <!-- INFORMES (full width) -->
+      <div class="module-card m-informes" style="grid-column: span 2;">
+        <div class="module-header">
+          <div class="module-icon">📊</div>
+          <div>
+            <h3>Informes</h3>
+            <p>Diario, mensual y consultas de caja</p>
+          </div>
+        </div>
+        <div class="rf-list">
+          <div class="rf-item"><span class="rf-code">RF026</span>Consultar ventas diarias — campo de fecha modificable para ver cualquier día</div>
+          <div class="rf-item"><span class="rf-code">RF027</span>Informe mensual de ventas por mes con: total monto, unidades vendidas, ventas contado, ventas con tarjeta, ventas con depósito, promedio de facturación mensual, días hábiles trabajados, unidades por semana</div>
+          <div class="rf-item"><span class="rf-code">RF027</span>Informe de ventas por empleado (opcional)</div>
+          <div class="rf-item"><span class="rf-code">RF028</span>Consultar aperturas, cierres y arqueos de caja por fecha ingresada</div>
+          <div class="rf-item"><span class="rf-code">RF029</span>Consultar y validar presupuestos emitidos por fecha</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FORMAS DE PAGO -->
+  <section>
+    <p class="section-title">Formas de pago en ventas</p>
+    <div class="pay-grid">
+      <div class="pay-card">
+        <div class="pay-icon">💵</div>
+        <div class="pay-name">Contado</div>
+        <div class="pay-desc">Pago en efectivo inmediato. La venta queda marcada como PAGADA.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-icon">💳</div>
+        <div class="pay-name">Tarjeta de crédito</div>
+        <div class="pay-desc">Pago con tarjeta. La venta queda marcada como PAGADA.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-icon">🏦</div>
+        <div class="pay-name">Depósito en cuenta</div>
+        <div class="pay-desc">Transferencia bancaria. La venta queda marcada como PAGADA.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-icon">📒</div>
+        <div class="pay-name">Deuda (cuenta corriente)</div>
+        <div class="pay-desc">El cliente no paga o paga parcialmente. Se genera deuda en su cuenta corriente.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENTIDADES -->
+  <section>
+    <p class="section-title">Entidades del dominio</p>
+    <div class="entities-grid">
+      <div class="entity-card">
+        <h4>📦 Artículo</h4>
+        <div class="entity-field">Marca</div>
+        <div class="entity-field">Modelo</div>
+        <div class="entity-field">Descripción</div>
+        <div class="entity-field">Stock</div>
+        <div class="entity-field">Precio unitario</div>
+        <div class="entity-field">Estado (activo)</div>
+      </div>
+      <div class="entity-card">
+        <h4>👤 Cliente</h4>
+        <div class="entity-field">Nombre y apellido</div>
+        <div class="entity-field">Teléfono</div>
+        <div class="entity-field">Email</div>
+        <div class="entity-field">Dirección</div>
+        <div class="entity-field">Deudas asociadas</div>
+      </div>
+      <div class="entity-card">
+        <h4>🏭 Proveedor</h4>
+        <div class="entity-field">Nombre</div>
+        <div class="entity-field">Contacto</div>
+        <div class="entity-field">Teléfono / Email</div>
+        <div class="entity-field">Compras pendientes</div>
+      </div>
+      <div class="entity-card">
+        <h4>👷 Empleado</h4>
+        <div class="entity-field">Nombre y apellido</div>
+        <div class="entity-field">Username</div>
+        <div class="entity-field">Password (BCrypt)</div>
+        <div class="entity-field">Rol (Admin / AdminEmp / Ventas)</div>
+      </div>
+      <div class="entity-card">
+        <h4>💰 Venta</h4>
+        <div class="entity-field">Cliente (opcional)</div>
+        <div class="entity-field">Empleado</div>
+        <div class="entity-field">Artículos + cantidades</div>
+        <div class="entity-field">Forma de pago</div>
+        <div class="entity-field">Descuento aplicado</div>
+        <div class="entity-field">Monto pagado / saldo</div>
+      </div>
+      <div class="entity-card">
+        <h4>📒 Deuda Cliente</h4>
+        <div class="entity-field">Venta origen</div>
+        <div class="entity-field">Monto original</div>
+        <div class="entity-field">Monto pagado</div>
+        <div class="entity-field">Saldo pendiente</div>
+        <div class="entity-field">Historial de pagos parciales</div>
+      </div>
+      <div class="entity-card">
+        <h4>🛒 Compra</h4>
+        <div class="entity-field">Proveedor</div>
+        <div class="entity-field">Artículos + cantidades</div>
+        <div class="entity-field">Pago inmediato o diferido</div>
+        <div class="entity-field">Saldo pendiente</div>
+        <div class="entity-field">Historial de pagos</div>
+      </div>
+      <div class="entity-card">
+        <h4>🏦 Caja</h4>
+        <div class="entity-field">Tipo (Apertura/Cierre/Arqueo/Retiro/Ingreso)</div>
+        <div class="entity-field">Monto</div>
+        <div class="entity-field">Empleado responsable</div>
+        <div class="entity-field">Fecha y hora</div>
+        <div class="entity-field">Observación</div>
+      </div>
+      <div class="entity-card">
+        <h4>📋 Presupuesto</h4>
+        <div class="entity-field">Cliente (opcional)</div>
+        <div class="entity-field">Artículos + cantidades</div>
+        <div class="entity-field">Fecha de emisión</div>
+        <div class="entity-field">Fecha de vencimiento</div>
+        <div class="entity-field">Auto-eliminado al vencer</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RNF -->
+  <section>
+    <p class="section-title">Requerimientos no funcionales</p>
+    <div class="nf-grid">
+      <div class="nf-card">
+        <div class="nf-num">01</div>
+        <div>
+          <h4>Integridad de la información</h4>
+          <p>La base de datos mantiene consistencia en correcciones, complementaciones, eliminaciones y modificaciones. Los errores de hardware o sentencias no completan su ejecución.</p>
+        </div>
+      </div>
+      <div class="nf-card">
+        <div class="nf-num">02</div>
+        <div>
+          <h4>Usabilidad</h4>
+          <p>Interfaz amigable con botones de acción claros y curva de aprendizaje pequeña. El sistema debe ser intuitivo para empleados sin experiencia técnica.</p>
+        </div>
+      </div>
+      <div class="nf-card">
+        <div class="nf-num">03</div>
+        <div>
+          <h4>Confiabilidad y seguridad</h4>
+          <p>Control de acceso con usuario y contraseña (BCrypt). Cada usuario tiene un perfil con permisos definidos. El sistema se recupera automáticamente ante fallos.</p>
+        </div>
+      </div>
+      <div class="nf-card">
+        <div class="nf-num">04</div>
+        <div>
+          <h4>Robustez</h4>
+          <p>El sistema responde satisfactoriamente ante situaciones no contempladas en la especificación. Los fallos se recuperan automáticamente en un lapso corto de tiempo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section>
+    <p class="section-title">Orden de implementación del POC</p>
+    <div class="roadmap-wrap">
+      <div class="roadmap">
+        <div class="roadmap-item">
+          <div class="step-num">1</div>
+          <div>
+            <h4>Setup inicial <span class="tag tag-green">✓ Completado</span></h4>
+            <p>Solución .NET, proyecto Web API, migración inicial, Next.js 16, auth con cookies y 3 roles, estructura de carpetas.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">2</div>
+          <div>
+            <h4>Conexión a Supabase <span class="tag tag-amber">En progreso</span></h4>
+            <p>Crear proyecto en Supabase, configurar string de conexión, correr migración en la nube.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">3</div>
+          <div>
+            <h4>ABM Artículos</h4>
+            <p>CRUD completo con búsqueda por marca, modelo, descripción y stock. Informe de disponibilidad.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">4</div>
+          <div>
+            <h4>ABM Clientes y Proveedores</h4>
+            <p>CRUD con campos de contacto. Base para el módulo de ventas y compras.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">5</div>
+          <div>
+            <h4>ABM Empleados</h4>
+            <p>Alta, baja y modificación de usuarios con asignación de rol.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">6</div>
+          <div>
+            <h4>Módulo Ventas <span class="tag tag-red">Crítico</span></h4>
+            <p>Registro de ventas con múltiples artículos, 4 formas de pago, descuentos y generación automática de deuda en cuenta corriente.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">7</div>
+          <div>
+            <h4>Módulo Caja</h4>
+            <p>Apertura, cierre, arqueo y retiro de dinero. Consulta por fecha.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">8</div>
+          <div>
+            <h4>Compras y Pagos a Proveedores</h4>
+            <p>Órdenes de compra con pago inmediato o diferido. Gestión de deuda con proveedores.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">9</div>
+          <div>
+            <h4>Presupuestos</h4>
+            <p>Emisión de presupuestos con vencimiento automático. Limpieza de vencidos en cada inicio.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="step-num">10</div>
+          <div>
+            <h4>Informes</h4>
+            <p>Informe diario de ventas con fecha modificable. Informe mensual con 8 métricas. Consultas de caja y presupuestos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">FiltCar POC · Lubricentro FILT-CAR · Skylia 2024</div>
+</div>
+</body>
+</html>

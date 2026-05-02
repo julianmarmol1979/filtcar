@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FiltCar — Stack Tecnológico</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .page { max-width: 960px; margin: 0 auto; }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 20px;
+      padding: 48px 40px;
+      color: white;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      background: rgba(59,130,246,0.15);
+      border-radius: 50%;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: 40%;
+      width: 160px; height: 160px;
+      background: rgba(99,102,241,0.1);
+      border-radius: 50%;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(59,130,246,0.25);
+      color: #93c5fd;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(147,197,253,0.2);
+    }
+    .header h1 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .header p {
+      color: #94a3b8;
+      font-size: 15px;
+    }
+
+    /* SECTION */
+    section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    /* STACK CARDS */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .stack-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 20px;
+      border: 1px solid #e2e8f0;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .stack-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .stack-card .layer {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .stack-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+    .stack-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .dot-fe { color: #3b82f6; }
+    .dot-be { color: #8b5cf6; }
+    .dot-db { color: #10b981; }
+    .dot-dp { color: #f59e0b; }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin: 3px 3px 0 0;
+    }
+    .tag-blue   { background: #eff6ff; color: #2563eb; }
+    .tag-purple { background: #f5f3ff; color: #7c3aed; }
+    .tag-green  { background: #f0fdf4; color: #16a34a; }
+    .tag-amber  { background: #fffbeb; color: #d97706; }
+    .tag-gray   { background: #f8fafc; color: #475569; }
+    .tag-red    { background: #fef2f2; color: #dc2626; }
+
+    /* ARCHITECTURE */
+    .arch-box {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      border: 1px solid #e2e8f0;
+    }
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+    }
+    .arch-node {
+      flex: 1;
+      min-width: 140px;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 14px;
+      text-align: center;
+    }
+    .arch-node .icon { font-size: 28px; margin-bottom: 8px; }
+    .arch-node .name { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .arch-node .tech { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .arch-node .host { font-size: 10px; color: #94a3b8; margin-top: 4px; font-style: italic; }
+    .arch-arrow {
+      font-size: 22px;
+      color: #cbd5e1;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .arch-node.fe { border-color: #bfdbfe; background: #eff6ff; }
+    .arch-node.be { border-color: #ddd6fe; background: #f5f3ff; }
+    .arch-node.db { border-color: #a7f3d0; background: #f0fdf4; }
+
+    /* FILE TREE */
+    .tree {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 28px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #94a3b8;
+      overflow-x: auto;
+    }
+    .tree .dir  { color: #60a5fa; font-weight: 600; }
+    .tree .file { color: #cbd5e1; }
+    .tree .note { color: #475569; font-style: italic; }
+    .tree .hi   { color: #34d399; }
+
+    /* PACKAGES TABLE */
+    .pkg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .pkg-box {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+    .pkg-header {
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .pkg-header.fe { background: #eff6ff; color: #1d4ed8; }
+    .pkg-header.be { background: #f5f3ff; color: #6d28d9; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 10px 20px; font-size: 13px; border-bottom: 1px solid #f8fafc; }
+    td:first-child { font-weight: 600; color: #0f172a; }
+    td:last-child { color: #64748b; text-align: right; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ENV */
+    .env-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .env-box {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+    }
+    .env-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: #0f172a; }
+    .env-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+    }
+    .env-item:last-child { border-bottom: none; }
+    .env-key { font-weight: 600; color: #475569; font-family: monospace; }
+    .env-val { color: #94a3b8; font-family: monospace; }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge">Stack Tecnológico — POC</div>
+    <h1>Lubricentro FILT-CAR</h1>
+    <p>Arquitectura, tecnologías y estructura del proyecto</p>
+  </div>
+
+  <!-- STACK -->
+  <section>
+    <p class="section-title">Capas del sistema</p>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="layer dot-fe">■ Frontend</div>
+        <h3>Next.js 16</h3>
+        <p>App Router, Server Components, TypeScript</p>
+        <div style="margin-top:12px">
+          <span class="tag tag-blue">Next.js 16</span>
+          <span class="tag tag-blue">React 19</span>
+          <span class="tag tag-blue">TypeScript</span>
+          <span class="tag tag-blue">Tailwind CSS</span>
+          <span class="tag tag-blue">shadcn/ui</span>
+        </div>
+      </div>
+      <div class="stack-card">
+        <div class="layer dot-be">■ Backend</div>
+        <h3>.NET 9 API</h3>
+        <p>Web API RESTful, Entity Framework Core 9</p>
+        <div style="margin-top:12px">
+          <span class="tag tag-purple">.NET 9</span>
+          <span class="tag tag-purple">EF Core 9</span>
+          <span class="tag tag-purple">Npgsql 9.0.4</span>
+          <span class="tag tag-purple">BCrypt.Net</span>
+        </div>
+      </div>
+      <div class="stack-card">
+        <div class="layer dot-db">■ Base de datos</div>
+        <h3>PostgreSQL</h3>
+        <p>Supabase cloud, Session Pooler (puerto 5432)</p>
+        <div style="margin-top:12px">
+          <span class="tag tag-green">PostgreSQL</span>
+          <span class="tag tag-green">Supabase</span>
+          <span class="tag tag-green">EF Migrations</span>
+        </div>
+      </div>
+      <div class="stack-card">
+        <div class="layer dot-dp">■ Deploy</div>
+        <h3>Vercel + Railway</h3>
+        <p>Frontend en Vercel, Backend en Railway</p>
+        <div style="margin-top:12px">
+          <span class="tag tag-amber">Vercel</span>
+          <span class="tag tag-amber">Railway</span>
+          <span class="tag tag-amber">GitHub CI/CD</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section>
+    <p class="section-title">Arquitectura de despliegue</p>
+    <div class="arch-box">
+      <div class="arch-flow">
+        <div class="arch-node fe">
+          <div class="icon">🌐</div>
+          <div class="name">Frontend</div>
+          <div class="tech">Next.js 16</div>
+          <div class="host">Vercel</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node be">
+          <div class="icon">⚙️</div>
+          <div class="name">Backend</div>
+          <div class="tech">.NET 9 Web API</div>
+          <div class="host">Railway</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node db">
+          <div class="icon">🗄️</div>
+          <div class="name">Base de datos</div>
+          <div class="tech">PostgreSQL</div>
+          <div class="host">Supabase</div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:14px 18px; background:#f8fafc; border-radius:10px; font-size:12px; color:#64748b; line-height:1.8;">
+        <strong style="color:#0f172a">Auth:</strong> Cookie <code style="background:#e2e8f0;padding:1px 6px;border-radius:4px">filtcar_session</code> → validada en proxy.ts (Next.js 16) · Sin JWT · Sin biblioteca de auth externa<br/>
+        <strong style="color:#0f172a">CORS:</strong> Configurado por variable <code style="background:#e2e8f0;padding:1px 6px;border-radius:4px">AllowedOrigins</code> separada por comas<br/>
+        <strong style="color:#0f172a">DB:</strong> Siempre Session Pooler de Supabase (puerto 5432) — Direct Connection falla en IPv4
+      </div>
+    </div>
+  </section>
+
+  <!-- FILE TREE -->
+  <section>
+    <p class="section-title">Estructura del repositorio</p>
+    <div class="tree">
+<span class="dir">LubricentroFiltCar/</span>
+├── <span class="hi">FiltCar.sln</span>                     <span class="note"># solución .NET en la raíz</span>
+├── .gitignore
+├── especificaciones.pdf
+│
+├── <span class="dir">frontend/</span>                       <span class="note"># Next.js 16</span>
+│   ├── <span class="hi">proxy.ts</span>                    <span class="note"># protección de rutas (Next.js 16 = proxy, no middleware)</span>
+│   ├── app/
+│   │   ├── <span class="dir">(app)/</span>               <span class="note"># rutas protegidas (layout con Sidebar)</span>
+│   │   │   ├── dashboard/
+│   │   │   ├── articulos/
+│   │   │   ├── clientes/
+│   │   │   ├── proveedores/
+│   │   │   ├── empleados/
+│   │   │   ├── ventas/
+│   │   │   ├── presupuestos/
+│   │   │   ├── caja/
+│   │   │   ├── compras/
+│   │   │   └── informes/
+│   │   ├── login/
+│   │   └── api/auth/
+│   │       ├── login/route.ts
+│   │       ├── logout/route.ts
+│   │       └── me/route.ts
+│   ├── <span class="dir">components/</span>
+│   │   └── Sidebar.tsx
+│   └── <span class="dir">lib/</span>
+│       ├── api.ts              <span class="note"># apiFetch helper</span>
+│       └── auth.ts             <span class="note"># SESSION_COOKIE, tipos</span>
+│
+└── <span class="dir">backend/</span>
+    └── <span class="dir">FiltCar.Api/</span>             <span class="note"># .NET 9 Web API</span>
+        ├── <span class="dir">Controllers/</span>
+        │   └── AuthController.cs
+        ├── <span class="dir">Models/</span>
+        │   ├── Enums.cs         <span class="note"># UserRole, PaymentMethod, CajaMovimientoTipo</span>
+        │   ├── Empleado.cs
+        │   ├── Articulo.cs
+        │   ├── Cliente.cs
+        │   ├── Proveedor.cs
+        │   ├── Venta.cs         <span class="note"># + VentaItem</span>
+        │   ├── Compra.cs        <span class="note"># + CompraItem + PagoProveedor</span>
+        │   ├── DeudaCliente.cs  <span class="note"># + PagoDeudaCliente</span>
+        │   ├── Caja.cs          <span class="note"># CajaMovimiento</span>
+        │   └── Presupuesto.cs   <span class="note"># + PresupuestoItem</span>
+        ├── <span class="dir">Data/</span>
+        │   └── AppDbContext.cs
+        ├── <span class="dir">Migrations/</span>
+        │   └── InitialCreate
+        ├── Program.cs
+        └── appsettings.json
+    </div>
+  </section>
+
+  <!-- PACKAGES -->
+  <section>
+    <p class="section-title">Paquetes y versiones</p>
+    <div class="pkg-grid">
+      <div class="pkg-box">
+        <div class="pkg-header fe">Frontend — npm</div>
+        <table>
+          <tr><td>next</td><td>16.2.4</td></tr>
+          <tr><td>react</td><td>19.2.4</td></tr>
+          <tr><td>tailwindcss</td><td>4.x</td></tr>
+          <tr><td>shadcn/ui</td><td>4.6.0</td></tr>
+          <tr><td>typescript</td><td>5.x</td></tr>
+        </table>
+      </div>
+      <div class="pkg-box">
+        <div class="pkg-header be">Backend — NuGet</div>
+        <table>
+          <tr><td>Microsoft.EntityFrameworkCore</td><td>9.0.4</td></tr>
+          <tr><td>Npgsql.EntityFrameworkCore.PostgreSQL</td><td>9.0.4</td></tr>
+          <tr><td>Microsoft.EntityFrameworkCore.Design</td><td>9.0.4</td></tr>
+          <tr><td>BCrypt.Net-Next</td><td>4.0.3</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENV VARS -->
+  <section>
+    <p class="section-title">Variables de entorno</p>
+    <div class="env-grid">
+      <div class="env-box">
+        <h4>Frontend — .env.local</h4>
+        <div class="env-item">
+          <span class="env-key">NEXT_PUBLIC_API_URL</span>
+          <span class="env-val">http://localhost:5000</span>
+        </div>
+        <div class="env-item">
+          <span class="env-key">AUTH_SECRET</span>
+          <span class="env-val">filtcar_secret_dev_2024</span>
+        </div>
+      </div>
+      <div class="env-box">
+        <h4>Backend — appsettings.json</h4>
+        <div class="env-item">
+          <span class="env-key">ConnectionStrings:DefaultConnection</span>
+          <span class="env-val">Supabase Session Pooler</span>
+        </div>
+        <div class="env-item">
+          <span class="env-key">AllowedOrigins</span>
+          <span class="env-val">http://localhost:3000</span>
+        </div>
+        <div class="env-item">
+          <span class="env-key">Auth:Secret</span>
+          <span class="env-val">filtcar_secret_dev_2024</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GOTCHAS -->
+  <section>
+    <p class="section-title">Decisiones técnicas clave</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:white;border-radius:14px;padding:18px;border:1px solid #e2e8f0;">
+        <div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Next.js 16</div>
+        <p style="font-size:13px;color:#374151;line-height:1.7">
+          Usa <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">proxy.ts</code> en lugar de <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">middleware.ts</code>. La función se llama <code>proxy</code>, no <code>middleware</code>.
+        </p>
+      </div>
+      <div style="background:white;border-radius:14px;padding:18px;border:1px solid #e2e8f0;">
+        <div style="font-size:11px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">shadcn/ui</div>
+        <p style="font-size:13px;color:#374151;line-height:1.7">
+          Usa <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">@base-ui/react</code>. Sin <code>asChild</code>. Para botones con Link usar <code>buttonVariants() + &lt;Link&gt;</code>.
+        </p>
+      </div>
+      <div style="background:white;border-radius:14px;padding:18px;border:1px solid #e2e8f0;">
+        <div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Supabase</div>
+        <p style="font-size:13px;color:#374151;line-height:1.7">
+          Siempre usar <strong>Session Pooler</strong> (puerto 5432). Direct Connection falla en IPv4. La región recomendada es São Paulo.
+        </p>
+      </div>
+      <div style="background:white;border-radius:14px;padding:18px;border:1px solid #e2e8f0;">
+        <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Railway</div>
+        <p style="font-size:13px;color:#374151;line-height:1.7">
+          Root Directory = <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">backend/FiltCar.Api</code>. Puerto de escucha: <code>8080</code>. AllowedOrigins separados por coma.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">FiltCar POC · Lubricentro FILT-CAR · Skylia 2024</div>
+</div>
+</body>
+</html>
