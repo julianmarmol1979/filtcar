@@ -54,8 +54,8 @@ export default function NuevaVentaPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/clientes").then((r) => r.json()).then((data: ClienteOption[]) =>
-      setClientes(data.filter((c: ClienteOption & { activo: boolean }) => (c as ClienteOption & { activo: boolean }).activo))
+    fetch("/api/clientes").then((r) => r.json()).then((data: (ClienteOption & { activo: boolean })[]) =>
+      setClientes(data.filter((c) => c.activo))
     );
     fetch("/api/articulos").then((r) => r.json()).then((data: ArticuloOption[]) =>
       setArticulos(data.filter((a) => a.activo && a.stock > 0))

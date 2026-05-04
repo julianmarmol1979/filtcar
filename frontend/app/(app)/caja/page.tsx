@@ -212,8 +212,8 @@ export default function CajaPage() {
                   value={form.observacion}
                   onChange={(e) => setForm({ ...form, observacion: e.target.value })}
                   placeholder={
-                    selectedTipo.value === "Arqueo" ? "Monto contado en caja" :
-                    selectedTipo.value === "Retiro" ? "Motivo del retiro" : "Opcional"
+                    form.tipo === "Arqueo" ? "Monto contado en caja" :
+                    form.tipo === "Retiro" ? "Motivo del retiro" : "Opcional"
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
