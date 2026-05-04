@@ -7,5 +7,5 @@ namespace FiltCar.Api.Controllers;
 public class HealthController : ControllerBase
 {
     [HttpGet]
-    public IActionResult Get() => Ok(new { status = "ok" });
+    public IActionResult Get() => Ok(new { status = "ok", version = "2026-05-04-b" });
 }
