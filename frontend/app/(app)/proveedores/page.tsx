@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Pencil, Search, X, Truck } from "lucide-react";
+import Pagination from "@/components/Pagination";
 
 interface Proveedor {
   id: number;
@@ -12,299 +13,175 @@ interface Proveedor {
   activo: boolean;
 }
 
-const emptyForm = {
-  nombre: "",
-  contacto: "",
-  telefono: "",
-  email: "",
-};
+const emptyForm = { nombre: "", contacto: "", telefono: "", email: "" };
 
 export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Proveedor | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [search, setSearch]           = useState("");
+  const [loading, setLoading]         = useState(true);
+  const [modalOpen, setModalOpen]     = useState(false);
+  const [editing, setEditing]         = useState<Proveedor | null>(null);
+  const [form, setForm]               = useState(emptyForm);
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState("");
+  const [page, setPage]               = useState(1);
+  const [pageSize, setPageSize]       = useState(10);
 
   const fetchProveedores = useCallback(async (q = "") => {
-    setLoading(true);
+    setLoading(true); setPage(1);
     try {
-      const res = await fetch(`/api/proveedores${q ? `?search=${encodeURIComponent(q)}` : ""}`);
+      const res  = await fetch(`/api/proveedores${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
       setProveedores(data);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchProveedores(); }, [fetchProveedores]);
-
   useEffect(() => {
-    const timer = setTimeout(() => fetchProveedores(search), 300);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => fetchProveedores(search), 300);
+    return () => clearTimeout(t);
   }, [search, fetchProveedores]);
 
-  function openCreate() {
-    setEditing(null);
-    setForm(emptyForm);
-    setError("");
-    setModalOpen(true);
-  }
+  const paged = proveedores.slice((page - 1) * pageSize, page * pageSize);
 
+  function openCreate() { setEditing(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(p: Proveedor) {
     setEditing(p);
-    setForm({
-      nombre:   p.nombre,
-      contacto: p.contacto ?? "",
-      telefono: p.telefono ?? "",
-      email:    p.email ?? "",
-    });
-    setError("");
-    setModalOpen(true);
+    setForm({ nombre: p.nombre, contacto: p.contacto ?? "", telefono: p.telefono ?? "", email: p.email ?? "" });
+    setError(""); setModalOpen(true);
   }
-
-  function closeModal() {
-    setModalOpen(false);
-    setEditing(null);
-    setError("");
-  }
+  function closeModal() { setModalOpen(false); setEditing(null); setError(""); }
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
+    e.preventDefault(); setSaving(true); setError("");
     try {
-      const url = editing ? `/api/proveedores/${editing.id}` : "/api/proveedores";
+      const url    = editing ? `/api/proveedores/${editing.id}` : "/api/proveedores";
       const method = editing ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          contacto: form.contacto || null,
-          telefono: form.telefono || null,
-          email:    form.email    || null,
-        }),
+      const res    = await fetch(url, {
+        method, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, contacto: form.contacto || null, telefono: form.telefono || null, email: form.email || null }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setError(err.message ?? "Error al guardar");
-        return;
-      }
-      closeModal();
-      fetchProveedores(search);
-    } finally {
-      setSaving(false);
-    }
+      if (!res.ok) { const err = await res.json().catch(() => ({})); setError(err.message ?? "Error al guardar"); return; }
+      closeModal(); fetchProveedores(search);
+    } finally { setSaving(false); }
   }
 
   async function handleToggle(p: Proveedor) {
     await fetch(`/api/proveedores/${p.id}/toggle`, { method: "PATCH" });
-    setProveedores((prev) =>
-      prev.map((x) => (x.id === p.id ? { ...x, activo: !x.activo } : x))
-    );
+    setProveedores((prev) => prev.map((x) => (x.id === p.id ? { ...x, activo: !x.activo } : x)));
   }
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">Proveedores</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestión de proveedores y distribuidores</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo proveedor
+        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          <Plus className="w-4 h-4" /> Nuevo proveedor
         </button>
       </div>
 
-      {/* Search */}
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Buscar por nombre, contacto..."
-          value={search}
+        <input type="text" placeholder="Buscar por nombre, contacto..." value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
         {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Cargando...</div>
         ) : proveedores.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
             <Truck className="w-10 h-10" />
-            <p className="text-sm font-medium">
-              {search ? "Sin resultados para la búsqueda" : "Todavía no hay proveedores"}
-            </p>
+            <p className="text-sm font-medium">{search ? "Sin resultados para la búsqueda" : "Todavía no hay proveedores"}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Empresa</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Contacto</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Teléfono</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Email</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600">Estado</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {proveedores.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900">{p.nombre}</td>
-                  <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
-                    {p.contacto || <span className="text-gray-400">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
-                    {p.telefono ? (
-                      <a href={`tel:${p.telefono}`} className="hover:text-blue-600 transition-colors">
-                        {p.telefono}
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">
-                    {p.email ? (
-                      <a href={`mailto:${p.email}`} className="hover:text-blue-600 transition-colors">
-                        {p.email}
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleToggle(p)}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
-                        p.activo
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      {p.activo ? "Activo" : "Inactivo"}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => openEdit(p)}
-                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Editar
-                    </button>
-                  </td>
+          <>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Empresa</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Contacto</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Teléfono</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Email</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Estado</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paged.map((p) => (
+                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-gray-900">{p.nombre}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{p.contacto || <span className="text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
+                      {p.telefono ? <a href={`tel:${p.telefono}`} className="hover:text-blue-600 transition-colors">{p.telefono}</a> : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">
+                      {p.email ? <a href={`mailto:${p.email}`} className="hover:text-blue-600 transition-colors">{p.email}</a> : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => handleToggle(p)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${p.activo ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                        {p.activo ? "Activo" : "Inactivo"}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                        <Pencil className="w-3.5 h-3.5" /> Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Pagination total={proveedores.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          </>
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mt-2 text-right">
-        {proveedores.length} proveedor{proveedores.length !== 1 ? "es" : ""}
-      </p>
-
-      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">
-                {editing ? "Editar proveedor" : "Nuevo proveedor"}
-              </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <h2 className="text-lg font-bold text-gray-900">{editing ? "Editar proveedor" : "Nuevo proveedor"}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
             </div>
-
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Nombre / Empresa <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Lubricantes del Sur S.A."
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre / Empresa <span className="text-red-500">*</span></label>
+                <input type="text" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: Lubricantes del Sur S.A." />
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Persona de contacto
-                </label>
-                <input
-                  type="text"
-                  value={form.contacto}
-                  onChange={(e) => setForm({ ...form, contacto: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Carlos Pérez"
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Persona de contacto</label>
+                <input type="text" value={form.contacto} onChange={(e) => setForm({ ...form, contacto: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: Carlos Pérez" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Teléfono</label>
-                  <input
-                    type="tel"
-                    value={form.telefono}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="2614 123456"
-                  />
+                  <input type="tel" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="2614 123456" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ventas@empresa.com"
-                  />
+                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ventas@empresa.com" />
                 </div>
               </div>
-
               {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
-
               <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60"
-                >
+                <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
                   {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear proveedor"}
                 </button>
               </div>

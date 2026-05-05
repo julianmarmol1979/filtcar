@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, ShoppingBag, ChevronDown, ChevronUp } from "lucide-react";
+import Pagination from "@/components/Pagination";
 
 interface Compra {
   id: number;
@@ -28,46 +29,43 @@ interface CompraDetalle {
   saldoPendiente: number;
 }
 
-function fmt(n: number) {
-  return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
-}
+function fmt(n: number) { return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 }); }
 function fmtFecha(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export default function ComprasPage() {
   const router = useRouter();
-  const [compras, setCompras] = useState<Compra[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [detalle, setDetalle] = useState<CompraDetalle | null>(null);
+  const [compras, setCompras]         = useState<Compra[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [expandedId, setExpandedId]   = useState<number | null>(null);
+  const [detalle, setDetalle]         = useState<CompraDetalle | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
+  const [page, setPage]               = useState(1);
+  const [pageSize, setPageSize]       = useState(10);
 
   const fetchCompras = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/compras");
+      const res  = await fetch("/api/compras");
       const data = await res.json();
       setCompras(data);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchCompras(); }, [fetchCompras]);
 
+  function handlePageChange(p: number) { setPage(p); setExpandedId(null); setDetalle(null); }
+
+  const paged = compras.slice((page - 1) * pageSize, page * pageSize);
+
   async function toggleDetalle(id: number) {
     if (expandedId === id) { setExpandedId(null); setDetalle(null); return; }
-    setExpandedId(id);
-    setDetalle(null);
-    setLoadingDetalle(true);
+    setExpandedId(id); setDetalle(null); setLoadingDetalle(true);
     try {
       const res = await fetch(`/api/compras/${id}`);
       setDetalle(await res.json());
-    } finally {
-      setLoadingDetalle(false);
-    }
+    } finally { setLoadingDetalle(false); }
   }
 
   return (
@@ -92,81 +90,83 @@ export default function ComprasPage() {
             <p className="text-sm font-medium">No hay compras registradas</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Proveedor</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Items</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600">Estado</th>
-                <th className="w-8 px-2 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {compras.map((c) => (
-                <>
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleDetalle(c.id)}>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{fmtFecha(c.fecha)}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{c.proveedor}</td>
-                    <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{c.itemsCount} art.</td>
-                    <td className="px-4 py-3 text-right font-bold text-gray-900">{fmt(c.total)}</td>
-                    <td className="px-4 py-3 text-center">
-                      {c.saldoPendiente > 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                          Debe {fmt(c.saldoPendiente)}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                          Pagado
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-3 text-gray-400">
-                      {expandedId === c.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </td>
-                  </tr>
-                  {expandedId === c.id && (
-                    <tr key={`${c.id}-d`}>
-                      <td colSpan={6} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
-                        {loadingDetalle ? <p className="text-sm text-gray-400">Cargando...</p> : detalle ? (
-                          <div>
-                            <p className="text-xs text-gray-500 mb-2 font-medium">
-                              Empleado: {detalle.empleado.apellido}, {detalle.empleado.nombre}
-                              <span className="ml-4">{detalle.pagoInmediato ? "Pago inmediato" : `Saldo pendiente: ${fmt(detalle.saldoPendiente)}`}</span>
-                            </p>
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="text-gray-500">
-                                  <th className="text-left pb-1 font-semibold">Artículo</th>
-                                  <th className="text-right pb-1 font-semibold">Cant.</th>
-                                  <th className="text-right pb-1 font-semibold">P. Compra</th>
-                                  <th className="text-right pb-1 font-semibold">Subtotal</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-blue-100">
-                                {detalle.items.map((item) => (
-                                  <tr key={item.id}>
-                                    <td className="py-1 text-gray-800 font-medium">{item.articulo}</td>
-                                    <td className="py-1 text-right text-gray-600">{item.cantidad}</td>
-                                    <td className="py-1 text-right text-gray-600">{fmt(item.precioUnitario)}</td>
-                                    <td className="py-1 text-right font-semibold text-gray-900">{fmt(item.subtotal)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : null}
+          <>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Proveedor</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Items</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Estado</th>
+                  <th className="w-8 px-2 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paged.map((c) => (
+                  <>
+                    <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleDetalle(c.id)}>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{fmtFecha(c.fecha)}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{c.proveedor}</td>
+                      <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{c.itemsCount} art.</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">{fmt(c.total)}</td>
+                      <td className="px-4 py-3 text-center">
+                        {c.saldoPendiente > 0 ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                            Debe {fmt(c.saldoPendiente)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                            Pagado
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-3 text-gray-400">
+                        {expandedId === c.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
+                    {expandedId === c.id && (
+                      <tr key={`${c.id}-d`}>
+                        <td colSpan={6} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                          {loadingDetalle ? <p className="text-sm text-gray-400">Cargando...</p> : detalle ? (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 font-medium">
+                                Empleado: {detalle.empleado.apellido}, {detalle.empleado.nombre}
+                                <span className="ml-4">{detalle.pagoInmediato ? "Pago inmediato" : `Saldo pendiente: ${fmt(detalle.saldoPendiente)}`}</span>
+                              </p>
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="text-gray-500">
+                                    <th className="text-left pb-1 font-semibold">Artículo</th>
+                                    <th className="text-right pb-1 font-semibold">Cant.</th>
+                                    <th className="text-right pb-1 font-semibold">P. Compra</th>
+                                    <th className="text-right pb-1 font-semibold">Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-blue-100">
+                                  {detalle.items.map((item) => (
+                                    <tr key={item.id}>
+                                      <td className="py-1 text-gray-800 font-medium">{item.articulo}</td>
+                                      <td className="py-1 text-right text-gray-600">{item.cantidad}</td>
+                                      <td className="py-1 text-right text-gray-600">{fmt(item.precioUnitario)}</td>
+                                      <td className="py-1 text-right font-semibold text-gray-900">{fmt(item.subtotal)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+            <Pagination total={compras.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onPageSizeChange={setPageSize} />
+          </>
         )}
       </div>
-      <p className="text-xs text-gray-400 mt-2 text-right">{compras.length} compra{compras.length !== 1 ? "s" : ""}</p>
     </div>
   );
 }
