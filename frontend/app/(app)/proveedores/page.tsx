@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, Truck } from "lucide-react";
+import { Plus, Pencil, Search, X, Truck, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Proveedor {
   id: number;
@@ -26,9 +27,10 @@ export default function ProveedoresPage() {
   const [error, setError]             = useState("");
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
+  const [selected, setSelected]       = useState<Set<number>>(new Set());
 
   const fetchProveedores = useCallback(async (q = "") => {
-    setLoading(true); setPage(1);
+    setLoading(true); setPage(1); setSelected(new Set());
     try {
       const res  = await fetch(`/api/proveedores${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
@@ -43,6 +45,27 @@ export default function ProveedoresPage() {
   }, [search, fetchProveedores]);
 
   const paged = proveedores.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = proveedores.length > 0 && proveedores.every((p) => selected.has(p.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(proveedores.map((p) => p.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? proveedores.filter((p) => selected.has(p.id)) : proveedores;
+    exportToExcel(
+      toExport.map((p) => ({
+        Nombre: p.nombre,
+        Contacto: p.contacto || "",
+        Teléfono: p.telefono || "",
+        Email: p.email || "",
+        Estado: p.activo ? "Activo" : "Inactivo",
+      })),
+      "proveedores"
+    );
+  }
 
   function openCreate() { setEditing(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(p: Proveedor) {
@@ -78,9 +101,17 @@ export default function ProveedoresPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Proveedores</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestión de proveedores y distribuidores</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo proveedor
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && proveedores.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo proveedor
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4 max-w-sm">
@@ -108,6 +139,10 @@ export default function ProveedoresPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Empresa</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Contacto</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Teléfono</th>
@@ -118,7 +153,11 @@ export default function ProveedoresPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paged.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${selected.has(p.id) ? "bg-blue-50" : ""}`}>
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                    </td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{p.nombre}</td>
                     <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{p.contacto || <span className="text-gray-400">—</span>}</td>
                     <td className="px-4 py-3 text-gray-600 hidden md:table-cell">

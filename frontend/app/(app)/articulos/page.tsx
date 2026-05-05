@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, PackageX } from "lucide-react";
+import { Plus, Pencil, Search, X, PackageX, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Articulo {
   id: number;
@@ -27,10 +28,12 @@ export default function ArticulosPage() {
   const [error, setError]         = useState("");
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(10);
+  const [selected, setSelected]   = useState<Set<number>>(new Set());
 
   const fetchArticulos = useCallback(async (q = "") => {
     setLoading(true);
     setPage(1);
+    setSelected(new Set());
     try {
       const res  = await fetch(`/api/articulos${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
@@ -47,6 +50,32 @@ export default function ArticulosPage() {
   }, [search, fetchArticulos]);
 
   const paged = articulos.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = articulos.length > 0 && articulos.every((a) => selected.has(a.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(articulos.map((a) => a.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? articulos.filter((a) => selected.has(a.id)) : articulos;
+    exportToExcel(
+      toExport.map((a) => ({
+        Marca: a.marca,
+        Modelo: a.modelo,
+        Descripción: a.descripcion || "",
+        Precio: a.precio,
+        Stock: a.stock,
+        Estado: a.activo ? "Activo" : "Inactivo",
+      })),
+      "articulos"
+    );
+  }
 
   function openCreate() { setEditing(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(a: Articulo) {
@@ -82,9 +111,17 @@ export default function ArticulosPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Artículos</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestión de productos y lubricantes</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo artículo
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && articulos.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo artículo
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4 max-w-sm">
@@ -112,6 +149,10 @@ export default function ArticulosPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Marca</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Modelo</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Descripción</th>
@@ -123,7 +164,11 @@ export default function ArticulosPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paged.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={a.id} className={`hover:bg-gray-50 transition-colors ${selected.has(a.id) ? "bg-blue-50" : ""}`}>
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={selected.has(a.id)} onChange={() => toggleOne(a.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                    </td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{a.marca}</td>
                     <td className="px-4 py-3 text-gray-700">{a.modelo}</td>
                     <td className="px-4 py-3 text-gray-500 hidden md:table-cell max-w-xs truncate">{a.descripcion || "—"}</td>

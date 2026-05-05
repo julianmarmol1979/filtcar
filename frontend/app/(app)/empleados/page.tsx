@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, UserCog, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Search, X, UserCog, Eye, EyeOff, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Empleado {
   id: number;
@@ -39,9 +40,10 @@ export default function EmpleadosPage() {
   const [error, setError]         = useState("");
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(10);
+  const [selected, setSelected]   = useState<Set<number>>(new Set());
 
   const fetchEmpleados = useCallback(async (q = "") => {
-    setLoading(true); setPage(1);
+    setLoading(true); setPage(1); setSelected(new Set());
     try {
       const res  = await fetch(`/api/empleados${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
@@ -56,6 +58,27 @@ export default function EmpleadosPage() {
   }, [search, fetchEmpleados]);
 
   const paged = empleados.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = empleados.length > 0 && empleados.every((e) => selected.has(e.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(empleados.map((e) => e.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? empleados.filter((e) => selected.has(e.id)) : empleados;
+    exportToExcel(
+      toExport.map((e) => ({
+        Apellido: e.apellido,
+        Nombre: e.nombre,
+        Usuario: e.username,
+        Rol: ROLES.find((r) => r.value === e.rol)?.label ?? e.rol,
+        Estado: e.activo ? "Activo" : "Inactivo",
+      })),
+      "empleados"
+    );
+  }
 
   function openCreate() { setEditing(null); setForm(emptyForm); setShowPassword(false); setError(""); setModalOpen(true); }
   function openEdit(e: Empleado) {
@@ -90,9 +113,17 @@ export default function EmpleadosPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Empleados</h1>
           <p className="text-sm text-gray-500 mt-0.5">Usuarios y roles del sistema</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo empleado
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && empleados.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo empleado
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4 max-w-sm">
@@ -120,6 +151,10 @@ export default function EmpleadosPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Usuario</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600">Rol</th>
@@ -129,7 +164,11 @@ export default function EmpleadosPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paged.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={e.id} className={`hover:bg-gray-50 transition-colors ${selected.has(e.id) ? "bg-blue-50" : ""}`}>
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={selected.has(e.id)} onChange={() => toggleOne(e.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                    </td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{e.apellido}, {e.nombre}</td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs hidden sm:table-cell">@{e.username}</td>
                     <td className="px-4 py-3 text-center">

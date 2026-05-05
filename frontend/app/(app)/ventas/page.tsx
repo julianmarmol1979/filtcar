@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Venta {
   id: number;
@@ -58,9 +59,10 @@ export default function VentasPage() {
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
+  const [selected, setSelected]       = useState<Set<number>>(new Set());
 
   const fetchVentas = useCallback(async (q = "") => {
-    setLoading(true); setPage(1); setExpandedId(null); setDetalle(null);
+    setLoading(true); setPage(1); setExpandedId(null); setDetalle(null); setSelected(new Set());
     try {
       const res  = await fetch(`/api/ventas${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
@@ -77,6 +79,28 @@ export default function VentasPage() {
   function handlePageChange(p: number) { setPage(p); setExpandedId(null); setDetalle(null); }
 
   const paged = ventas.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = ventas.length > 0 && ventas.every((v) => selected.has(v.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(ventas.map((v) => v.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? ventas.filter((v) => selected.has(v.id)) : ventas;
+    exportToExcel(
+      toExport.map((v) => ({
+        Fecha: fmtFecha(v.fecha),
+        Cliente: v.clienteNombre ?? "Mostrador",
+        Items: v.itemsCount,
+        Total: v.total,
+        "Forma de pago": formaPagoLabel[v.formaPago] ?? v.formaPago,
+        Estado: v.saldoPendiente > 0 ? `Debe ${fmt(v.saldoPendiente)}` : "Pagado",
+      })),
+      "ventas"
+    );
+  }
 
   async function toggleDetalle(id: number) {
     if (expandedId === id) { setExpandedId(null); setDetalle(null); return; }
@@ -94,10 +118,18 @@ export default function VentasPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Ventas</h1>
           <p className="text-sm text-gray-500 mt-0.5">Historial de ventas del lubricentro</p>
         </div>
-        <button onClick={() => router.push("/ventas/nueva")}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nueva venta
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && ventas.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={() => router.push("/ventas/nueva")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nueva venta
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4 max-w-sm">
@@ -125,6 +157,10 @@ export default function VentasPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Cliente</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Items</th>
@@ -137,7 +173,12 @@ export default function VentasPage() {
               <tbody className="divide-y divide-gray-100">
                 {paged.map((v) => (
                   <>
-                    <tr key={v.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleDetalle(v.id)}>
+                    <tr key={v.id} className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.has(v.id) ? "bg-blue-50" : ""}`}
+                      onClick={() => toggleDetalle(v.id)}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      </td>
                       <td className="px-4 py-3 text-gray-600 text-xs">{fmtFecha(v.fecha)}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900">
                         {v.clienteNombre ?? <span className="text-gray-400 font-normal">Mostrador</span>}
@@ -166,7 +207,7 @@ export default function VentasPage() {
                     </tr>
                     {expandedId === v.id && (
                       <tr key={`${v.id}-d`}>
-                        <td colSpan={7} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                        <td colSpan={8} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
                           {loadingDetalle ? <p className="text-sm text-gray-400">Cargando detalle...</p> : detalle ? (
                             <div>
                               <p className="text-xs text-gray-500 mb-2 font-medium">

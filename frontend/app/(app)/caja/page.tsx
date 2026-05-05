@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, X, Wallet } from "lucide-react";
+import { Plus, X, Wallet, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Movimiento {
   id: number;
@@ -41,9 +42,10 @@ export default function CajaPage() {
   const [error, setError]             = useState("");
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
+  const [selected, setSelected]       = useState<Set<number>>(new Set());
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setSelected(new Set());
     try {
       const res  = await fetch("/api/caja");
       const data = await res.json();
@@ -55,6 +57,30 @@ export default function CajaPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const paged = movimientos.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = movimientos.length > 0 && movimientos.every((m) => selected.has(m.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(movimientos.map((m) => m.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? movimientos.filter((m) => selected.has(m.id)) : movimientos;
+    exportToExcel(
+      toExport.map((m) => {
+        const meta = tipoMeta(m.tipo);
+        return {
+          Fecha: fmtFecha(m.fecha),
+          Tipo: meta.label,
+          Monto: meta.sign < 0 ? -m.monto : m.monto,
+          Observación: m.observacion || "",
+          Empleado: m.empleado,
+        };
+      }),
+      "caja"
+    );
+  }
 
   function openModal() { setForm({ tipo: "Ingreso", monto: 0, observacion: "" }); setError(""); setModalOpen(true); }
 
@@ -79,10 +105,18 @@ export default function CajaPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Caja</h1>
           <p className="text-sm text-gray-500 mt-0.5">Movimientos y saldo del lubricentro</p>
         </div>
-        <button onClick={openModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo movimiento
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && movimientos.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={openModal}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo movimiento
+          </button>
+        </div>
       </div>
 
       <div className={`rounded-xl p-5 mb-5 border ${balance >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
@@ -105,6 +139,10 @@ export default function CajaPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600">Tipo</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Observación</th>
@@ -116,7 +154,11 @@ export default function CajaPage() {
                 {paged.map((m) => {
                   const meta = tipoMeta(m.tipo);
                   return (
-                    <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={m.id} className={`hover:bg-gray-50 transition-colors ${selected.has(m.id) ? "bg-blue-50" : ""}`}>
+                      <td className="px-4 py-3">
+                        <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleOne(m.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{fmtFecha(m.fecha)}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>

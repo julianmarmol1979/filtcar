@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, Users } from "lucide-react";
+import { Plus, Pencil, Search, X, Users, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Cliente {
   id: number;
@@ -27,10 +28,12 @@ export default function ClientesPage() {
   const [error, setError]         = useState("");
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(10);
+  const [selected, setSelected]   = useState<Set<number>>(new Set());
 
   const fetchClientes = useCallback(async (q = "") => {
     setLoading(true);
     setPage(1);
+    setSelected(new Set());
     try {
       const res  = await fetch(`/api/clientes${q ? `?search=${encodeURIComponent(q)}` : ""}`);
       const data = await res.json();
@@ -45,6 +48,28 @@ export default function ClientesPage() {
   }, [search, fetchClientes]);
 
   const paged = clientes.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = clientes.length > 0 && clientes.every((c) => selected.has(c.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(clientes.map((c) => c.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? clientes.filter((c) => selected.has(c.id)) : clientes;
+    exportToExcel(
+      toExport.map((c) => ({
+        Apellido: c.apellido,
+        Nombre: c.nombre,
+        Teléfono: c.telefono || "",
+        Email: c.email || "",
+        Dirección: c.direccion || "",
+        Estado: c.activo ? "Activo" : "Inactivo",
+      })),
+      "clientes"
+    );
+  }
 
   function openCreate() { setEditing(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(c: Cliente) {
@@ -80,9 +105,17 @@ export default function ClientesPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Clientes</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestión de clientes del lubricentro</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo cliente
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && clientes.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo cliente
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4 max-w-sm">
@@ -110,6 +143,10 @@ export default function ClientesPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Teléfono</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Email</th>
@@ -120,7 +157,11 @@ export default function ClientesPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paged.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={c.id} className={`hover:bg-gray-50 transition-colors ${selected.has(c.id) ? "bg-blue-50" : ""}`}>
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                    </td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{c.apellido}, {c.nombre}</td>
                     <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                       {c.telefono ? <a href={`tel:${c.telefono}`} className="hover:text-blue-600 transition-colors">{c.telefono}</a> : <span className="text-gray-400">—</span>}

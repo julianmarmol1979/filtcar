@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ShoppingBag, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, ShoppingBag, ChevronDown, ChevronUp, Download } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Compra {
   id: number;
@@ -43,9 +44,10 @@ export default function ComprasPage() {
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
+  const [selected, setSelected]       = useState<Set<number>>(new Set());
 
   const fetchCompras = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setSelected(new Set());
     try {
       const res  = await fetch("/api/compras");
       const data = await res.json();
@@ -58,6 +60,28 @@ export default function ComprasPage() {
   function handlePageChange(p: number) { setPage(p); setExpandedId(null); setDetalle(null); }
 
   const paged = compras.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = compras.length > 0 && compras.every((c) => selected.has(c.id));
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(compras.map((c) => c.id)));
+  }
+  function toggleOne(id: number) {
+    setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function handleExport() {
+    const toExport = selected.size > 0 ? compras.filter((c) => selected.has(c.id)) : compras;
+    exportToExcel(
+      toExport.map((c) => ({
+        Fecha: fmtFecha(c.fecha),
+        Proveedor: c.proveedor,
+        Items: c.itemsCount,
+        Total: c.total,
+        Pago: c.pagoInmediato ? "Inmediato" : "Pendiente",
+        Estado: c.saldoPendiente > 0 ? `Debe ${fmt(c.saldoPendiente)}` : "Pagado",
+      })),
+      "compras"
+    );
+  }
 
   async function toggleDetalle(id: number) {
     if (expandedId === id) { setExpandedId(null); setDetalle(null); return; }
@@ -75,10 +99,18 @@ export default function ComprasPage() {
           <h1 className="text-2xl font-extrabold text-gray-900">Compras</h1>
           <p className="text-sm text-gray-500 mt-0.5">Compras a proveedores y reposición de stock</p>
         </div>
-        <button onClick={() => router.push("/compras/nueva")}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" /> Nueva compra
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && compras.length > 0 && (
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download className="w-4 h-4" />
+              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+            </button>
+          )}
+          <button onClick={() => router.push("/compras/nueva")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Nueva compra
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -94,6 +126,10 @@ export default function ComprasPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Proveedor</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Items</th>
@@ -105,7 +141,12 @@ export default function ComprasPage() {
               <tbody className="divide-y divide-gray-100">
                 {paged.map((c) => (
                   <>
-                    <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleDetalle(c.id)}>
+                    <tr key={c.id} className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.has(c.id) ? "bg-blue-50" : ""}`}
+                      onClick={() => toggleDetalle(c.id)}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{fmtFecha(c.fecha)}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900">{c.proveedor}</td>
                       <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{c.itemsCount} art.</td>
@@ -127,7 +168,7 @@ export default function ComprasPage() {
                     </tr>
                     {expandedId === c.id && (
                       <tr key={`${c.id}-d`}>
-                        <td colSpan={6} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                        <td colSpan={7} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
                           {loadingDetalle ? <p className="text-sm text-gray-400">Cargando...</p> : detalle ? (
                             <div>
                               <p className="text-xs text-gray-500 mb-2 font-medium">
