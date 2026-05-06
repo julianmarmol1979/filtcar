@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CajaMovimiento> CajaMovimientos => Set<CajaMovimiento>();
     public DbSet<Presupuesto> Presupuestos => Set<Presupuesto>();
     public DbSet<PresupuestoItem> PresupuestoItems => Set<PresupuestoItem>();
+    public DbSet<Turno> Turnos => Set<Turno>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

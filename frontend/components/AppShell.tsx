@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X, Droplets } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 const navItems = [
   { href: "/dashboard",    label: "Dashboard",    icon: "⊞" },
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/deudas",       label: "Deudas",       icon: "💳", badge: "deudas" },
   { href: "/caja",         label: "Caja",         icon: "🏦" },
   { href: "/compras",      label: "Compras",      icon: "🛒" },
+  { href: "/turnos",       label: "Turnos",       icon: "📅" },
   { href: "/informes",     label: "Informes",     icon: "📊" },
 ] as const;
 
@@ -109,14 +111,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-gray-700 flex-shrink-0">
+      {/* Logout + footer */}
+      <div className="p-4 border-t border-gray-700 flex-shrink-0 space-y-3">
         <button
           onClick={handleLogout}
           className="w-full text-left text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"
         >
           <span>⬡</span> Cerrar sesión
         </button>
+        <div className="text-[10px] text-gray-600 leading-tight">
+          <p className="font-semibold text-gray-500">© 2026 FILT-CAR · Lubricentro</p>
+          <p>Sistema de Gestión · <span className="text-gray-500">{APP_VERSION}</span></p>
+        </div>
       </div>
     </>
   );
