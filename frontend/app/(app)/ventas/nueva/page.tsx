@@ -40,6 +40,18 @@ function fmt(n: number) {
   return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
 }
 
+interface PresupuestoItemPre {
+  articuloId: number;
+  articulo: string;
+  stock: number;
+  cantidad: number;
+  precioUnitario: number;
+}
+interface PresupuestoPre {
+  clienteId: number | null;
+  items: PresupuestoItemPre[];
+}
+
 export default function NuevaVentaPage() {
   const router = useRouter();
 
@@ -52,19 +64,49 @@ export default function NuevaVentaPage() {
   const [formaPago, setFormaPago] = useState<FormaPago>("Contado");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fromPresupuesto, setFromPresupuesto] = useState(false);
 
   useEffect(() => {
-    fetch("/api/clientes").then((r) => r.json()).then((data: (ClienteOption & { activo: boolean })[]) =>
-      setClientes(data.filter((c) => c.activo))
-    );
-    fetch("/api/articulos").then((r) => r.json()).then((data: ArticuloOption[]) =>
-      setArticulos(data.filter((a) => a.activo && a.stock > 0))
-    );
+    const params = new URLSearchParams(window.location.search);
+    const fromId = params.get("from");
+
+    Promise.all([
+      fetch("/api/clientes").then((r) => r.json()),
+      fetch("/api/articulos").then((r) => r.json()),
+      fromId ? fetch(`/api/presupuestos/${fromId}`).then((r) => r.json()) : Promise.resolve(null),
+    ]).then(([clientesData, articulosData, presData]: [
+      (ClienteOption & { activo: boolean })[],
+      ArticuloOption[],
+      PresupuestoPre | null
+    ]) => {
+      setClientes(clientesData.filter((c) => c.activo));
+      const arts = articulosData.filter((a) => a.activo);
+      setArticulos(arts);
+
+      if (presData) {
+        setFromPresupuesto(true);
+        if (presData.clienteId) setClienteId(presData.clienteId);
+        const preItems: LineItem[] = presData.items
+          .map((item) => {
+            const art = arts.find((a) => a.id === item.articuloId);
+            const stock = art?.stock ?? item.stock;
+            return {
+              articuloId: item.articuloId,
+              label: item.articulo,
+              precio: item.precioUnitario,
+              stock,
+              cantidad: Math.min(item.cantidad, Math.max(stock, 0)),
+            };
+          })
+          .filter((item) => item.stock > 0);
+        setItems(preItems);
+      }
+    });
   }, []);
 
-  // Available articles (not yet added)
+  // Available articles: active, with stock, not yet added to the list
   const articulosDisponibles = articulos.filter(
-    (a) => !items.find((i) => i.articuloId === a.id)
+    (a) => a.stock > 0 && !items.find((i) => i.articuloId === a.id)
   );
 
   function handleAddArticulo(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -141,6 +183,15 @@ export default function NuevaVentaPage() {
           <p className="text-sm text-gray-500 mt-0.5">Registrá los artículos vendidos</p>
         </div>
       </div>
+
+      {fromPresupuesto && (
+        <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
+          <ShoppingCart className="w-4 h-4 text-blue-500 flex-shrink-0" />
+          <p className="text-sm text-blue-700 font-medium">
+            Artículos pre-cargados desde el presupuesto. Revisá los datos y confirmá la venta.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
 

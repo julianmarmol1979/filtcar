@@ -52,12 +52,15 @@ public class PresupuestosController(AppDbContext db) : ControllerBase
             presupuesto.Id,
             presupuesto.Fecha,
             presupuesto.Vencimiento,
+            ClienteId = presupuesto.ClienteId,
             Cliente  = presupuesto.Cliente is null ? null : new { presupuesto.Cliente.Nombre, presupuesto.Cliente.Apellido },
             Empleado = new { presupuesto.Empleado.Nombre, presupuesto.Empleado.Apellido },
             Items = presupuesto.Items.Select(i => new
             {
                 i.Id,
+                i.ArticuloId,
                 Articulo = $"{i.Articulo.Marca} {i.Articulo.Modelo}",
+                Stock    = i.Articulo.Stock,
                 i.Cantidad,
                 i.PrecioUnitario,
                 i.Subtotal

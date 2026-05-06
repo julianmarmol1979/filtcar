@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { Plus, FileText, ChevronDown, ChevronUp, Download, ShoppingCart } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 
@@ -22,9 +22,10 @@ interface PresupuestoDetalle {
   id: number;
   fecha: string;
   vencimiento: string;
+  clienteId: number | null;
   cliente: { nombre: string; apellido: string } | null;
   empleado: { nombre: string; apellido: string };
-  items: { id: number; articulo: string; cantidad: number; precioUnitario: number; subtotal: number }[];
+  items: { id: number; articuloId: number; articulo: string; stock: number; cantidad: number; precioUnitario: number; subtotal: number }[];
   total: number;
   observacion: string | null;
   vencido: boolean;
@@ -169,10 +170,19 @@ export default function PresupuestosPage() {
                         <td colSpan={7} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
                           {loadingDetalle ? <p className="text-sm text-gray-400">Cargando...</p> : detalle ? (
                             <div>
-                              <p className="text-xs text-gray-500 mb-2 font-medium">
-                                Vendedor: {detalle.empleado.apellido}, {detalle.empleado.nombre}
-                                {detalle.observacion && <span className="ml-4">Obs: {detalle.observacion}</span>}
-                              </p>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-gray-500 font-medium">
+                                  Vendedor: {detalle.empleado.apellido}, {detalle.empleado.nombre}
+                                  {detalle.observacion && <span className="ml-4">Obs: {detalle.observacion}</span>}
+                                </p>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/ventas/nueva?from=${detalle.id}`); }}
+                                  className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                  <ShoppingCart className="w-3.5 h-3.5" />
+                                  Convertir a venta
+                                </button>
+                              </div>
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="text-gray-500">
