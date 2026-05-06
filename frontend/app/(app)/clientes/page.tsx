@@ -201,7 +201,8 @@ export default function ClientesPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-4 py-3">
@@ -251,6 +252,7 @@ export default function ClientesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             <Pagination total={clientes.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
           </>
         )}

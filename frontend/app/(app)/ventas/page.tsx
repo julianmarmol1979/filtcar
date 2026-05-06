@@ -157,7 +157,8 @@ export default function VentasPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-4 py-3">
@@ -246,6 +247,7 @@ export default function VentasPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             <Pagination total={ventas.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onPageSizeChange={setPageSize} />
           </>
         )}
