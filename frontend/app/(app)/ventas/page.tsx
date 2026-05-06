@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp, Download, FileDown } from "lucide-react";
+import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp, Download, FileDown, CalendarDays } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 import { generateVentaPdf } from "@/lib/generatePdf";
@@ -52,15 +52,17 @@ function fmtFecha(iso: string) {
 
 export default function VentasPage() {
   const router = useRouter();
-  const [ventas, setVentas]           = useState<Venta[]>([]);
-  const [search, setSearch]           = useState("");
-  const [loading, setLoading]         = useState(true);
-  const [expandedId, setExpandedId]   = useState<number | null>(null);
-  const [detalle, setDetalle]         = useState<VentaDetalle | null>(null);
+  const [ventas, setVentas]               = useState<Venta[]>([]);
+  const [search, setSearch]               = useState("");
+  const [desde, setDesde]                 = useState("");
+  const [hasta, setHasta]                 = useState("");
+  const [loading, setLoading]             = useState(true);
+  const [expandedId, setExpandedId]       = useState<number | null>(null);
+  const [detalle, setDetalle]             = useState<VentaDetalle | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
-  const [page, setPage]               = useState(1);
-  const [pageSize, setPageSize]       = useState(10);
-  const [selected, setSelected]       = useState<Set<number>>(new Set());
+  const [page, setPage]                   = useState(1);
+  const [pageSize, setPageSize]           = useState(10);
+  const [selected, setSelected]           = useState<Set<number>>(new Set());
 
   const fetchVentas = useCallback(async (q = "") => {
     setLoading(true); setPage(1); setExpandedId(null); setDetalle(null); setSelected(new Set());
@@ -77,19 +79,37 @@ export default function VentasPage() {
     return () => clearTimeout(t);
   }, [search, fetchVentas]);
 
+  // Reset page when date filters change
+  useEffect(() => { setPage(1); setExpandedId(null); setDetalle(null); }, [desde, hasta]);
+
+  // Client-side date filtering on top of server-side search
+  const hasDateFilter = !!desde || !!hasta;
+  const filtered = hasDateFilter
+    ? ventas.filter((v) => {
+        const d = new Date(v.fecha);
+        if (desde && d < new Date(desde + "T00:00:00")) return false;
+        if (hasta && d > new Date(hasta + "T23:59:59")) return false;
+        return true;
+      })
+    : ventas;
+
+  const totalFiltrado = filtered.reduce((s, v) => s + v.total, 0);
+
   function handlePageChange(p: number) { setPage(p); setExpandedId(null); setDetalle(null); }
 
-  const paged = ventas.slice((page - 1) * pageSize, page * pageSize);
-  const allSelected = ventas.length > 0 && ventas.every((v) => selected.has(v.id));
+  const paged       = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = filtered.length > 0 && filtered.every((v) => selected.has(v.id));
+
+  function clearFilters() { setDesde(""); setHasta(""); setSearch(""); }
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(ventas.map((v) => v.id)));
+    setSelected(allSelected ? new Set() : new Set(filtered.map((v) => v.id)));
   }
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
   async function handleExport() {
-    const toExport = selected.size > 0 ? ventas.filter((v) => selected.has(v.id)) : ventas;
+    const toExport = selected.size > 0 ? filtered.filter((v) => selected.has(v.id)) : filtered;
     await exportToExcel(
       toExport.map((v) => ({
         Fecha: fmtFecha(v.fecha),
@@ -112,15 +132,18 @@ export default function VentasPage() {
     } finally { setLoadingDetalle(false); }
   }
 
+  const anyFilter = !!search || hasDateFilter;
+
   return (
     <div>
+      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Ventas</h1>
           <p className="text-sm text-gray-500 mt-0.5">Historial de ventas del lubricentro</p>
         </div>
         <div className="flex items-center gap-2">
-          {!loading && ventas.length > 0 && (
+          {!loading && filtered.length > 0 && (
             <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -136,25 +159,72 @@ export default function VentasPage() {
         </div>
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" placeholder="Buscar por cliente..." value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+      {/* Filters row */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="Buscar por cliente..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Date range */}
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-gray-400 hidden sm:block" />
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Desde</label>
+            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Hasta</label>
+            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+              min={desde || undefined}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
+          </div>
+        </div>
+
+        {/* Clear filters */}
+        {anyFilter && (
+          <button onClick={clearFilters}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-3 py-2 rounded-lg transition-colors">
             <X className="w-3.5 h-3.5" />
+            Limpiar filtros
           </button>
         )}
       </div>
 
+      {/* Period summary — shown when date filter is active */}
+      {!loading && hasDateFilter && filtered.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-blue-700 font-medium">
+            {filtered.length} {filtered.length === 1 ? "venta" : "ventas"} en el período seleccionado
+          </p>
+          <p className="text-lg font-extrabold text-blue-800">{fmt(totalFiltrado)}</p>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Cargando...</div>
-        ) : ventas.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
             <ShoppingCart className="w-10 h-10" />
-            <p className="text-sm font-medium">{search ? "Sin resultados" : "Todavía no hay ventas registradas"}</p>
+            <p className="text-sm font-medium">
+              {anyFilter ? "Sin ventas para los filtros aplicados" : "Todavía no hay ventas registradas"}
+            </p>
+            {anyFilter && (
+              <button onClick={clearFilters} className="text-xs text-blue-600 hover:underline mt-1">
+                Limpiar filtros
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -258,7 +328,7 @@ export default function VentasPage() {
               </tbody>
             </table>
             </div>
-            <Pagination total={ventas.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onPageSizeChange={setPageSize} />
+            <Pagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onPageSizeChange={setPageSize} />
           </>
         )}
       </div>
