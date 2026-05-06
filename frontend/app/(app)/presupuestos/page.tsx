@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, ChevronDown, ChevronUp, Download, ShoppingCart } from "lucide-react";
+import { Plus, FileText, ChevronDown, ChevronUp, Download, ShoppingCart, FileDown } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
+import { generatePresupuestoPdf } from "@/lib/generatePdf";
 
 interface Presupuesto {
   id: number;
@@ -179,13 +180,22 @@ export default function PresupuestosPage() {
                                   Vendedor: {detalle.empleado.apellido}, {detalle.empleado.nombre}
                                   {detalle.observacion && <span className="ml-4">Obs: {detalle.observacion}</span>}
                                 </p>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); router.push(`/ventas/nueva?from=${detalle.id}`); }}
-                                  className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                                >
-                                  <ShoppingCart className="w-3.5 h-3.5" />
-                                  Convertir a venta
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); generatePresupuestoPdf(detalle); }}
+                                    className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    <FileDown className="w-3.5 h-3.5" />
+                                    PDF
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); router.push(`/ventas/nueva?from=${detalle.id}`); }}
+                                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    <ShoppingCart className="w-3.5 h-3.5" />
+                                    Convertir a venta
+                                  </button>
+                                </div>
                               </div>
                               <table className="w-full text-xs">
                                 <thead>

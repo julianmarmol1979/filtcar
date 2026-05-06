@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { Plus, Search, X, ShoppingCart, ChevronDown, ChevronUp, Download, FileDown } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
+import { generateVentaPdf } from "@/lib/generatePdf";
 
 interface Venta {
   id: number;
@@ -214,10 +215,19 @@ export default function VentasPage() {
                         <td colSpan={8} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
                           {loadingDetalle ? <p className="text-sm text-gray-400">Cargando detalle...</p> : detalle ? (
                             <div>
-                              <p className="text-xs text-gray-500 mb-2 font-medium">
-                                Vendedor: {detalle.empleado.apellido}, {detalle.empleado.nombre}
-                                {detalle.descuento > 0 && <span className="ml-4">Descuento: {fmt(detalle.descuento)}</span>}
-                              </p>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-gray-500 font-medium">
+                                  Vendedor: {detalle.empleado.apellido}, {detalle.empleado.nombre}
+                                  {detalle.descuento > 0 && <span className="ml-4">Descuento: {fmt(detalle.descuento)}</span>}
+                                </p>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); generateVentaPdf(detalle); }}
+                                  className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                  <FileDown className="w-3.5 h-3.5" />
+                                  PDF
+                                </button>
+                              </div>
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="text-gray-500">
