@@ -209,9 +209,9 @@ export default function InformesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Informes</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Informes</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Análisis de ventas, compras y stock
           </p>

@@ -106,20 +106,23 @@ export default function ArticulosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Artículos</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Artículos</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestión de productos y lubricantes</p>
         </div>
         <div className="flex items-center gap-2">
           {!loading && articulos.length > 0 && (
-            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               <Download className="w-4 h-4" />
-              {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+              <span className="hidden sm:inline">
+                {selected.size > 0 ? `Exportar ${selected.size} seleccionados` : "Exportar todos"}
+              </span>
             </button>
           )}
           <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-            <Plus className="w-4 h-4" /> Nuevo artículo
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nuevo artículo</span>
           </button>
         </div>
       </div>
