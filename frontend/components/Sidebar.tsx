@@ -12,6 +12,7 @@ const navItems = [
   { href: "/empleados",    label: "Empleados",   icon: "👷" },
   { href: "/ventas",       label: "Ventas",      icon: "💰" },
   { href: "/presupuestos", label: "Presupuestos",icon: "📋" },
+  { href: "/deudas",       label: "Deudas",      icon: "💳", badge: "deudas" },
   { href: "/caja",         label: "Caja",        icon: "🏦" },
   { href: "/compras",      label: "Compras",     icon: "🛒" },
   { href: "/informes",     label: "Informes",    icon: "📊" },
@@ -21,6 +22,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
   const [stockBajo, setStockBajo] = useState(0);
+  const [deudas, setDeudas]       = useState(0);
 
   // Poll stock-bajo count every 2 minutes
   useEffect(() => {
@@ -38,13 +40,29 @@ export function Sidebar() {
     return () => clearInterval(id);
   }, []);
 
+  // Poll deudas pendientes count every 2 minutes
+  useEffect(() => {
+    async function fetchDeudas() {
+      try {
+        const res  = await fetch("/api/deudas");
+        const data = await res.json();
+        setDeudas(Array.isArray(data) ? data.length : 0);
+      } catch {
+        // silently ignore
+      }
+    }
+    fetchDeudas();
+    const id = setInterval(fetchDeudas, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }
 
-  const badges: Record<string, number> = { stockBajo };
+  const badges: Record<string, number> = { stockBajo, deudas };
 
   return (
     <aside className="w-56 flex-shrink-0 bg-gray-900 text-white flex flex-col h-screen sticky top-0">

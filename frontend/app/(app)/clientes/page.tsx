@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, Users, Download } from "lucide-react";
+import { Plus, Pencil, Search, X, Users, Download, History, ShoppingCart, FileText } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 
@@ -15,7 +15,44 @@ interface Cliente {
   activo: boolean;
 }
 
+interface VentaHistorial {
+  id: number;
+  fecha: string;
+  total: number;
+  descuento: number;
+  formaPago: string;
+  saldoPendiente: number;
+  itemsCount: number;
+}
+
+interface PresupuestoHistorial {
+  id: number;
+  fecha: string;
+  vencimiento: string;
+  total: number;
+  itemsCount: number;
+  vencido: boolean;
+}
+
+type HistorialTab = "ventas" | "presupuestos";
+
 const emptyForm = { nombre: "", apellido: "", telefono: "", email: "", direccion: "" };
+
+function fmt(n: number) {
+  return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
+}
+function fmtFecha(iso: string) {
+  return new Date(iso).toLocaleDateString("es-AR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+}
+
+const FORMA_PAGO_COLOR: Record<string, string> = {
+  Contado:  "bg-green-100 text-green-700",
+  Tarjeta:  "bg-blue-100 text-blue-700",
+  Deposito: "bg-purple-100 text-purple-700",
+  Deuda:    "bg-red-100 text-red-700",
+};
 
 export default function ClientesPage() {
   const [clientes, setClientes]   = useState<Cliente[]>([]);
@@ -29,6 +66,13 @@ export default function ClientesPage() {
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(10);
   const [selected, setSelected]   = useState<Set<number>>(new Set());
+
+  // Historial
+  const [historialCliente, setHistorialCliente]   = useState<Cliente | null>(null);
+  const [historialTab, setHistorialTab]           = useState<HistorialTab>("ventas");
+  const [historialVentas, setHistorialVentas]     = useState<VentaHistorial[]>([]);
+  const [historialPresu, setHistorialPresu]       = useState<PresupuestoHistorial[]>([]);
+  const [loadingHistorial, setLoadingHistorial]   = useState(false);
 
   const fetchClientes = useCallback(async (q = "") => {
     setLoading(true);
@@ -58,7 +102,7 @@ export default function ClientesPage() {
   }
   async function handleExport() {
     const toExport = selected.size > 0 ? clientes.filter((c) => selected.has(c.id)) : clientes;
-    await exportToExcel(
+    exportToExcel(
       toExport.map((c) => ({
         Apellido: c.apellido,
         Nombre: c.nombre,
@@ -96,6 +140,20 @@ export default function ClientesPage() {
   async function handleToggle(c: Cliente) {
     await fetch(`/api/clientes/${c.id}/toggle`, { method: "PATCH" });
     setClientes((prev) => prev.map((x) => (x.id === c.id ? { ...x, activo: !x.activo } : x)));
+  }
+
+  async function openHistorial(c: Cliente) {
+    setHistorialCliente(c);
+    setHistorialTab("ventas");
+    setHistorialVentas([]);
+    setHistorialPresu([]);
+    setLoadingHistorial(true);
+    try {
+      const res  = await fetch(`/api/clientes/${c.id}/historial`);
+      const data = await res.json();
+      setHistorialVentas(data.ventas ?? []);
+      setHistorialPresu(data.presupuestos ?? []);
+    } finally { setLoadingHistorial(false); }
   }
 
   return (
@@ -177,9 +235,14 @@ export default function ClientesPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => openEdit(c)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
-                        <Pencil className="w-3.5 h-3.5" /> Editar
-                      </button>
+                      <div className="flex items-center justify-center gap-3">
+                        <button onClick={() => openHistorial(c)} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 font-medium transition-colors">
+                          <History className="w-3.5 h-3.5" /> Historial
+                        </button>
+                        <button onClick={() => openEdit(c)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                          <Pencil className="w-3.5 h-3.5" /> Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -190,6 +253,7 @@ export default function ClientesPage() {
         )}
       </div>
 
+      {/* ── Edit / Create modal ──────────────────────────────────────────────── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
@@ -234,6 +298,132 @@ export default function ClientesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Historial modal ──────────────────────────────────────────────────── */}
+      {historialCliente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setHistorialCliente(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 flex flex-col max-h-[80vh]">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {historialCliente.apellido}, {historialCliente.nombre}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Historial de operaciones</p>
+              </div>
+              <button onClick={() => setHistorialCliente(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 px-6">
+              <button
+                onClick={() => setHistorialTab("ventas")}
+                className={`flex items-center gap-1.5 py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors ${
+                  historialTab === "ventas"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Ventas {!loadingHistorial && `(${historialVentas.length})`}
+              </button>
+              <button
+                onClick={() => setHistorialTab("presupuestos")}
+                className={`flex items-center gap-1.5 py-3 px-1 text-sm font-semibold border-b-2 transition-colors ${
+                  historialTab === "presupuestos"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Presupuestos {!loadingHistorial && `(${historialPresu.length})`}
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {loadingHistorial ? (
+                <p className="text-center text-gray-400 text-sm py-8">Cargando...</p>
+              ) : historialTab === "ventas" ? (
+                historialVentas.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 text-gray-400 py-10">
+                    <ShoppingCart className="w-8 h-8" />
+                    <p className="text-sm">Sin ventas registradas</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-100">
+                        <th className="text-left pb-2 font-semibold">Fecha</th>
+                        <th className="text-center pb-2 font-semibold">Items</th>
+                        <th className="text-center pb-2 font-semibold">Forma pago</th>
+                        <th className="text-right pb-2 font-semibold">Total</th>
+                        <th className="text-right pb-2 font-semibold">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {historialVentas.map((v) => (
+                        <tr key={v.id} className="hover:bg-gray-50">
+                          <td className="py-2.5 text-gray-500">{fmtFecha(v.fecha)}</td>
+                          <td className="py-2.5 text-center text-gray-600">{v.itemsCount}</td>
+                          <td className="py-2.5 text-center">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${FORMA_PAGO_COLOR[v.formaPago] ?? "bg-gray-100 text-gray-600"}`}>
+                              {v.formaPago}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right font-semibold text-gray-900">{fmt(v.total)}</td>
+                          <td className="py-2.5 text-right">
+                            {v.saldoPendiente > 0
+                              ? <span className="font-bold text-red-600">{fmt(v.saldoPendiente)}</span>
+                              : <span className="text-green-600 font-medium">Cobrado</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : (
+                historialPresu.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 text-gray-400 py-10">
+                    <FileText className="w-8 h-8" />
+                    <p className="text-sm">Sin presupuestos registrados</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-100">
+                        <th className="text-left pb-2 font-semibold">Fecha</th>
+                        <th className="text-left pb-2 font-semibold">Vence</th>
+                        <th className="text-center pb-2 font-semibold">Items</th>
+                        <th className="text-right pb-2 font-semibold">Total</th>
+                        <th className="text-center pb-2 font-semibold">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {historialPresu.map((p) => (
+                        <tr key={p.id} className="hover:bg-gray-50">
+                          <td className="py-2.5 text-gray-500">{fmtFecha(p.fecha)}</td>
+                          <td className="py-2.5 text-gray-500">{fmtFecha(p.vencimiento)}</td>
+                          <td className="py-2.5 text-center text-gray-600">{p.itemsCount}</td>
+                          <td className="py-2.5 text-right font-semibold text-gray-900">{fmt(p.total)}</td>
+                          <td className="py-2.5 text-center">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${p.vencido ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                              {p.vencido ? "Vencido" : "Vigente"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -87,6 +87,47 @@ public class ClientesController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return Ok(new { cliente.Id, cliente.Activo });
     }
+
+    // ── GET /api/clientes/{id}/historial ────────────────────────────────────
+    [HttpGet("{id}/historial")]
+    public async Task<IActionResult> Historial(int id)
+    {
+        var cliente = await db.Clientes.FindAsync(id);
+        if (cliente is null) return NotFound();
+
+        var ventas = await db.Ventas
+            .Include(v => v.Items)
+            .Where(v => v.ClienteId == id)
+            .OrderByDescending(v => v.Fecha)
+            .Select(v => new
+            {
+                v.Id,
+                v.Fecha,
+                v.Total,
+                v.Descuento,
+                FormaPago      = v.FormaPago.ToString(),
+                v.SaldoPendiente,
+                ItemsCount     = v.Items.Count
+            })
+            .ToListAsync();
+
+        var presupuestos = await db.Presupuestos
+            .Include(p => p.Items)
+            .Where(p => p.ClienteId == id)
+            .OrderByDescending(p => p.Fecha)
+            .Select(p => new
+            {
+                p.Id,
+                p.Fecha,
+                p.Vencimiento,
+                p.Total,
+                ItemsCount = p.Items.Count,
+                Vencido    = p.Vencimiento < DateTime.UtcNow
+            })
+            .ToListAsync();
+
+        return Ok(new { ventas, presupuestos });
+    }
 }
 
 public record ClienteRequest(
