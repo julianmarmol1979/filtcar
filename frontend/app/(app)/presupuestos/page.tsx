@@ -67,9 +67,9 @@ export default function PresupuestosPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? presupuestos.filter((p) => selected.has(p.id)) : presupuestos;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((p) => ({
         Fecha: fmtFecha(p.fecha),
         Vencimiento: fmtFecha(p.vencimiento),

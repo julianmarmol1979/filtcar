@@ -87,9 +87,9 @@ export default function VentasPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? ventas.filter((v) => selected.has(v.id)) : ventas;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((v) => ({
         Fecha: fmtFecha(v.fecha),
         Cliente: v.clienteNombre ?? "Mostrador",

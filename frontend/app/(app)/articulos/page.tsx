@@ -62,9 +62,9 @@ export default function ArticulosPage() {
       return s;
     });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? articulos.filter((a) => selected.has(a.id)) : articulos;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((a) => ({
         Marca: a.marca,
         Modelo: a.modelo,

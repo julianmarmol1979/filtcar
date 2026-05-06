@@ -65,9 +65,9 @@ export default function CajaPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? movimientos.filter((m) => selected.has(m.id)) : movimientos;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((m) => {
         const meta = tipoMeta(m.tipo);
         return {

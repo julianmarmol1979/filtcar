@@ -56,9 +56,9 @@ export default function ClientesPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? clientes.filter((c) => selected.has(c.id)) : clientes;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((c) => ({
         Apellido: c.apellido,
         Nombre: c.nombre,

@@ -66,9 +66,9 @@ export default function EmpleadosPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? empleados.filter((e) => selected.has(e.id)) : empleados;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((e) => ({
         Apellido: e.apellido,
         Nombre: e.nombre,

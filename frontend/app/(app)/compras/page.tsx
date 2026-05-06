@@ -68,9 +68,9 @@ export default function ComprasPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? compras.filter((c) => selected.has(c.id)) : compras;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((c) => ({
         Fecha: fmtFecha(c.fecha),
         Proveedor: c.proveedor,

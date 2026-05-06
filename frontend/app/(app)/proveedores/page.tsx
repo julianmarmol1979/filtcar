@@ -53,9 +53,9 @@ export default function ProveedoresPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function handleExport() {
+  async function handleExport() {
     const toExport = selected.size > 0 ? proveedores.filter((p) => selected.has(p.id)) : proveedores;
-    exportToExcel(
+    await exportToExcel(
       toExport.map((p) => ({
         Nombre: p.nombre,
         Contacto: p.contacto || "",
