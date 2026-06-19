@@ -70,7 +70,10 @@ export default function LoginPage() {
             {[
               "Ventas y presupuestos al instante",
               "Control de stock con alertas automáticas",
-              "Informes y estadísticas en tiempo real",
+              "Caja con historial de movimientos",
+              "Compras a proveedores y cuenta corriente",
+              "Turnos y agenda del lubricentro",
+              "Dashboard con gráficos y estadísticas",
             ].map((f) => (
               <div key={f} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-blue-600/30 border border-blue-500/50 flex items-center justify-center shrink-0">
