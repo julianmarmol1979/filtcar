@@ -79,12 +79,19 @@ public class DashboardController(AppDbContext db) : ControllerBase
 
         // Top 5 artículos por cantidad vendida (all time)
         var topArticulos = await db.VentaItems
-            .GroupBy(i => i.Articulo.Nombre)
+            .Join(db.Articulos, i => i.ArticuloId, a => a.Id,
+                (i, a) => new
+                {
+                    Nombre   = a.Marca + " " + a.Modelo,
+                    Cantidad = i.Cantidad,
+                    Subtotal = i.Subtotal,
+                })
+            .GroupBy(x => x.Nombre)
             .Select(g => new
             {
                 Nombre   = g.Key,
-                Cantidad = g.Sum(i => i.Cantidad),
-                Total    = g.Sum(i => i.Subtotal),
+                Cantidad = g.Sum(x => x.Cantidad),
+                Total    = g.Sum(x => x.Subtotal),
             })
             .OrderByDescending(g => g.Cantidad)
             .Take(5)
