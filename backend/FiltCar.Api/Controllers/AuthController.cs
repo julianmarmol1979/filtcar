@@ -53,6 +53,28 @@ public class AuthController(AppDbContext db, IConfiguration config) : Controller
             rol = empleado.Rol.ToString()
         });
     }
+
+    [HttpPatch("cambiar-password")]
+    public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordRequest req)
+    {
+        if (string.IsNullOrEmpty(req.Username))
+            return BadRequest(new { message = "Usuario requerido" });
+
+        var empleado = await db.Empleados.FirstOrDefaultAsync(e => e.Username == req.Username && e.Activo);
+        if (empleado is null)
+            return Unauthorized();
+
+        if (!BCrypt.Net.BCrypt.Verify(req.PasswordActual, empleado.PasswordHash))
+            return BadRequest(new { message = "La contraseña actual es incorrecta" });
+
+        if (req.PasswordNueva.Length < 6)
+            return BadRequest(new { message = "La contraseña debe tener al menos 6 caracteres" });
+
+        empleado.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.PasswordNueva);
+        await db.SaveChangesAsync();
+        return Ok();
+    }
 }
 
 public record LoginRequest(string Username, string Password);
+public record CambiarPasswordRequest(string Username, string PasswordActual, string PasswordNueva);

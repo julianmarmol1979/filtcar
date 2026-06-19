@@ -254,44 +254,125 @@ export async function generatePresupuestoPdf(d: PresupuestoDetalleForPdf) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  let y = drawHeader(doc, "PRESUPUESTO", `N ${d.id}  -  ${dateStr(d.fecha)}`);
+  // ── Blue header band ──────────────────────────────────────────────────────
+  doc.setFillColor(30, 64, 175);
+  doc.rect(0, 0, 210, 36, "F");
 
-  y += 2;
-  drawInfoRow(doc, "Cliente",      d.cliente ? `${d.cliente.apellido}, ${d.cliente.nombre}` : "Sin cliente", y);
-  y += 6;
-  drawInfoRow(doc, "Vendedor",     `${d.empleado.apellido}, ${d.empleado.nombre}`, y);
-  y += 6;
-  drawInfoRow(doc, "Valido hasta", dateStr(d.vencimiento), y);
-  y += 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text("FILT-CAR Lubricentro", ML, 16);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(147, 197, 253);
+  doc.text("Filtros · Lubricantes · Aceites", ML, 23);
+  doc.text("Tel: (0291) 000-0000  |  filtcar@ejemplo.com", ML, 28);
+
+  // Presupuesto label at right
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.text("PRESUPUESTO", MR, 14, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(147, 197, 253);
+  doc.text(`N° ${d.id}`, MR, 20, { align: "right" });
+  doc.text(`Fecha: ${dateStr(d.fecha)}`, MR, 26, { align: "right" });
+
+  let y = 46;
+
+  // ── Two-column info block ─────────────────────────────────────────────────
+  const midX = 105 + 5;
+  const rightColX = midX + 5;
+
+  // Left: client info box
+  doc.setFillColor(249, 250, 251);
+  doc.roundedRect(ML, y, 86, 26, 2, 2, "F");
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(ML, y, 86, 26, 2, 2, "S");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text("CLIENTE", ML + 4, y + 5);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(17, 24, 39);
+  const clientName = d.cliente
+    ? `${d.cliente.apellido}, ${d.cliente.nombre}`
+    : "Consumidor final";
+  doc.text(clientName, ML + 4, y + 13);
+
+  // Right: validity box
+  doc.setFillColor(d.vencido ? 254 : 240, d.vencido ? 242 : 253, d.vencido ? 242 : 244);
+  doc.roundedRect(rightColX, y, 80, 26, 2, 2, "F");
+  doc.setDrawColor(d.vencido ? 252 : 167, d.vencido ? 165 : 243, d.vencido ? 165 : 208);
+  doc.roundedRect(rightColX, y, 80, 26, 2, 2, "S");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text("VÁLIDO HASTA", rightColX + 4, y + 5);
+  doc.setFontSize(12);
+  doc.setTextColor(d.vencido ? 185 : 5, d.vencido ? 28 : 150, d.vencido ? 28 : 105);
+  doc.text(dateStr(d.vencimiento), rightColX + 4, y + 14);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Asesor: ${d.empleado.apellido}, ${d.empleado.nombre}`, rightColX + 4, y + 22);
+
+  y += 34;
+
+  // ── Observacion ───────────────────────────────────────────────────────────
   if (d.observacion) {
-    drawInfoRow(doc, "Observacion", d.observacion, y);
-    y += 6;
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(ML, y, CW, 9, 1.5, 1.5, "F");
+    doc.setDrawColor(253, 230, 138);
+    doc.roundedRect(ML, y, CW, 9, 1.5, 1.5, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(146, 64, 14);
+    doc.text("Nota:", ML + 4, y + 6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(92, 45, 8);
+    doc.text(d.observacion.slice(0, 120), ML + 18, y + 6);
+    y += 14;
+  } else {
+    y += 4;
   }
-  y += 4;
 
-  drawDivider(doc, y);
-  y += 7;
-
+  // ── Items table ───────────────────────────────────────────────────────────
   y = drawItemsTable(doc, d.items, y);
-  y += 2;
-  y = drawTotals(doc, d.total, 0, y);
   y += 4;
 
+  // ── Totals box ────────────────────────────────────────────────────────────
+  doc.setFillColor(30, 64, 175);
+  doc.roundedRect(MR - 65, y, 65, 14, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text("TOTAL:", MR - 61, y + 9);
+  doc.setFontSize(12);
+  doc.text(money(d.total), MR - 2, y + 9, { align: "right" });
+  y += 22;
+
+  // ── Status banner ─────────────────────────────────────────────────────────
   drawStatusBadge(
     doc,
-    d.vencido ? "PRESUPUESTO VENCIDO" : "PRESUPUESTO VIGENTE",
+    d.vencido ? "⚠  PRESUPUESTO VENCIDO" : "✓  PRESUPUESTO VIGENTE",
     !d.vencido,
     y
   );
-
   y += 16;
+
+  // ── Terms ─────────────────────────────────────────────────────────────────
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(8);
-  doc.setTextColor(107, 114, 128);
-  doc.text(
-    "Los precios de este presupuesto estan sujetos a disponibilidad de stock.",
-    105, y, { align: "center" }
-  );
+  doc.setFontSize(7.5);
+  doc.setTextColor(156, 163, 175);
+  doc.text("Los precios quedan sujetos a disponibilidad de stock y variaciones en el tipo de cambio.", 105, y, { align: "center" });
+  doc.text("Este presupuesto no constituye factura.", 105, y + 4.5, { align: "center" });
 
   drawFooter(doc);
   doc.save(`presupuesto-${d.id}.pdf`);

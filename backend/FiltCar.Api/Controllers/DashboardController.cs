@@ -55,4 +55,52 @@ public class DashboardController(AppDbContext db) : ControllerBase
             PresupuestosVigentes = presupuestosVigentes,
         });
     }
+
+    // GET /api/dashboard/charts
+    [HttpGet("charts")]
+    public async Task<IActionResult> GetCharts()
+    {
+        var now        = DateTime.UtcNow;
+        var sixMonthsAgo = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5);
+
+        // Ventas por mes (last 6 months)
+        var ventasPorMes = await db.Ventas
+            .Where(v => v.Fecha >= sixMonthsAgo)
+            .GroupBy(v => new { v.Fecha.Year, v.Fecha.Month })
+            .Select(g => new
+            {
+                Year  = g.Key.Year,
+                Month = g.Key.Month,
+                Total = g.Sum(v => v.Total),
+                Count = g.Count(),
+            })
+            .OrderBy(g => g.Year).ThenBy(g => g.Month)
+            .ToListAsync();
+
+        // Top 5 artículos por cantidad vendida (all time)
+        var topArticulos = await db.VentaItems
+            .GroupBy(i => i.Articulo.Nombre)
+            .Select(g => new
+            {
+                Nombre   = g.Key,
+                Cantidad = g.Sum(i => i.Cantidad),
+                Total    = g.Sum(i => i.Subtotal),
+            })
+            .OrderByDescending(g => g.Cantidad)
+            .Take(5)
+            .ToListAsync();
+
+        var meses = new[] { "", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" };
+
+        return Ok(new
+        {
+            VentasPorMes = ventasPorMes.Select(v => new
+            {
+                Mes   = meses[v.Month] + " " + v.Year.ToString()[2..],
+                Total = v.Total,
+                Count = v.Count,
+            }),
+            TopArticulos = topArticulos,
+        });
+    }
 }

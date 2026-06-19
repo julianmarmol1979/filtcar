@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, X, Wallet, Download } from "lucide-react";
+import { Plus, X, Wallet, Download, CalendarDays } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 
@@ -36,6 +36,8 @@ export default function CajaPage() {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [balance, setBalance]         = useState(0);
   const [loading, setLoading]         = useState(true);
+  const [desde, setDesde]             = useState("");
+  const [hasta, setHasta]             = useState("");
   const [modalOpen, setModalOpen]     = useState(false);
   const [form, setForm]               = useState({ tipo: "Ingreso", monto: 0, observacion: "" });
   const [saving, setSaving]           = useState(false);
@@ -55,18 +57,36 @@ export default function CajaPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { setPage(1); }, [desde, hasta]);
 
-  const paged = movimientos.slice((page - 1) * pageSize, page * pageSize);
-  const allSelected = movimientos.length > 0 && movimientos.every((m) => selected.has(m.id));
+  const hasDateFilter = !!desde || !!hasta;
+  const filtered = hasDateFilter
+    ? movimientos.filter((m) => {
+        const d = new Date(m.fecha);
+        if (desde && d < new Date(desde + "T00:00:00")) return false;
+        if (hasta && d > new Date(hasta + "T23:59:59")) return false;
+        return true;
+      })
+    : movimientos;
 
+  // Period balance: sum of signed movements (Arqueo/Cierre neutral)
+  const periodBalance = filtered.reduce((s, m) => {
+    const meta = tipoMeta(m.tipo);
+    return s + meta.sign * m.monto;
+  }, 0);
+
+  const paged       = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = filtered.length > 0 && filtered.every((m) => selected.has(m.id));
+
+  function clearFilters() { setDesde(""); setHasta(""); }
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(movimientos.map((m) => m.id)));
+    setSelected(allSelected ? new Set() : new Set(filtered.map((m) => m.id)));
   }
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
   async function handleExport() {
-    const toExport = selected.size > 0 ? movimientos.filter((m) => selected.has(m.id)) : movimientos;
+    const toExport = selected.size > 0 ? filtered.filter((m) => selected.has(m.id)) : filtered;
     await exportToExcel(
       toExport.map((m) => {
         const meta = tipoMeta(m.tipo);
@@ -74,7 +94,7 @@ export default function CajaPage() {
           Fecha: fmtFecha(m.fecha),
           Tipo: meta.label,
           Monto: meta.sign < 0 ? -m.monto : m.monto,
-          Observación: m.observacion || "",
+          "Observación": m.observacion || "",
           Empleado: m.empleado,
         };
       }),
@@ -106,7 +126,7 @@ export default function CajaPage() {
           <p className="text-sm text-gray-500 mt-0.5">Movimientos y saldo del lubricentro</p>
         </div>
         <div className="flex items-center gap-2">
-          {!loading && movimientos.length > 0 && (
+          {!loading && filtered.length > 0 && (
             <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -122,20 +142,58 @@ export default function CajaPage() {
         </div>
       </div>
 
-      <div className={`rounded-xl p-5 mb-5 border ${balance >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Saldo actual</p>
-        <p className={`text-3xl font-extrabold ${balance >= 0 ? "text-green-700" : "text-red-700"}`}>
-          {balance < 0 ? "-" : ""}{fmt(balance)}
-        </p>
+      {/* Balance cards */}
+      <div className={`flex flex-wrap gap-4 mb-5`}>
+        <div className={`flex-1 min-w-[180px] rounded-xl p-5 border ${balance >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Saldo actual</p>
+          <p className={`text-3xl font-extrabold ${balance >= 0 ? "text-green-700" : "text-red-700"}`}>
+            {balance < 0 ? "-" : ""}{fmt(balance)}
+          </p>
+        </div>
+        {hasDateFilter && filtered.length > 0 && (
+          <div className={`flex-1 min-w-[180px] rounded-xl p-5 border ${periodBalance >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+              Neto del período · {filtered.length} mov.
+            </p>
+            <p className={`text-3xl font-extrabold ${periodBalance >= 0 ? "text-blue-700" : "text-orange-700"}`}>
+              {periodBalance < 0 ? "-" : "+"}{fmt(periodBalance)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Date filters */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-gray-400 hidden sm:block" />
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Desde</label>
+            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Hasta</label>
+            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+              min={desde || undefined}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
+          </div>
+        </div>
+        {hasDateFilter && (
+          <button onClick={clearFilters}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-3 py-2 rounded-lg transition-colors">
+            <X className="w-3.5 h-3.5" /> Limpiar
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Cargando...</div>
-        ) : movimientos.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
             <Wallet className="w-10 h-10" />
-            <p className="text-sm font-medium">No hay movimientos registrados</p>
+            <p className="text-sm font-medium">{hasDateFilter ? "Sin movimientos en ese período" : "No hay movimientos registrados"}</p>
+            {hasDateFilter && <button onClick={clearFilters} className="text-xs text-blue-600 hover:underline mt-1">Limpiar filtros</button>}
           </div>
         ) : (
           <>
@@ -182,7 +240,7 @@ export default function CajaPage() {
               </tbody>
             </table>
             </div>
-            <Pagination total={movimientos.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+            <Pagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
           </>
         )}
       </div>
