@@ -30,6 +30,7 @@ const emptyForm = { nombre: "", apellido: "", username: "", password: "", rol: "
 
 export default function EmpleadosPage() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [isAdmin, setIsAdmin]     = useState(false);
   const [search, setSearch]       = useState("");
   const [loading, setLoading]     = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -56,6 +57,9 @@ export default function EmpleadosPage() {
     const t = setTimeout(() => fetchEmpleados(search), 300);
     return () => clearTimeout(t);
   }, [search, fetchEmpleados]);
+  useEffect(() => {
+    fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then((d) => setIsAdmin(d?.rol === "Admin"));
+  }, []);
 
   const paged = empleados.slice((page - 1) * pageSize, page * pageSize);
   const allSelected = empleados.length > 0 && empleados.every((e) => selected.has(e.id));
@@ -122,10 +126,12 @@ export default function EmpleadosPage() {
               </span>
             </button>
           )}
-          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Nuevo empleado</span>
-          </button>
+          {isAdmin && (
+            <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuevo empleado</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -181,18 +187,22 @@ export default function EmpleadosPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => handleToggle(e)} disabled={e.username === "admin"}
+                      <button onClick={() => handleToggle(e)} disabled={e.username === "admin" || !isAdmin}
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${
-                          e.username === "admin" ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          e.username === "admin" || !isAdmin ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : e.activo ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
                             : "bg-gray-100 text-gray-500 hover:bg-gray-200 cursor-pointer"}`}>
                         {e.activo ? "Activo" : "Inactivo"}
                       </button>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => openEdit(e)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
-                        <Pencil className="w-3.5 h-3.5" /> Editar
-                      </button>
+                      {isAdmin ? (
+                        <button onClick={() => openEdit(e)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                          <Pencil className="w-3.5 h-3.5" /> Editar
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

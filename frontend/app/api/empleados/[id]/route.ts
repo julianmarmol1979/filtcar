@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAuth, proxyFetch } from "@/lib/server-auth";
+import { requireAdmin, proxyFetch } from "@/lib/server-auth";
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth();
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
