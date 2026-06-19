@@ -37,8 +37,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [pwdError, setPwdError]     = useState("");
   const [pwdOk, setPwdOk]           = useState(false);
   const [pwdSaving, setPwdSaving]   = useState(false);
+  const [me, setMe]                 = useState<{ username: string; rol: string } | null>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setMe(d); });
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -101,14 +106,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <>
       {/* Logo / header */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-gray-700 flex-shrink-0">
-        <div>
+      <div className="flex items-start justify-between px-5 py-4 border-b border-gray-700 flex-shrink-0">
+        <div className="min-w-0">
           <h1 className="text-lg font-bold tracking-wide">FILT-CAR</h1>
           <p className="text-xs text-gray-400">Lubricentro</p>
+          {me && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-white uppercase">
+                  {me.username.charAt(0)}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-200 truncate">{me.username}</p>
+                <p className="text-[10px] text-blue-400">{me.rol}</p>
+              </div>
+            </div>
+          )}
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="lg:hidden text-gray-400 hover:text-white transition-colors p-1"
+          className="lg:hidden text-gray-400 hover:text-white transition-colors p-1 mt-0.5"
           aria-label="Cerrar menú"
         >
           <X className="w-5 h-5" />
