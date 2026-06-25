@@ -1,4 +1,5 @@
 using FiltCar.Api.Data;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +7,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AppDbContext db, IConfiguration config) : ControllerBase
+public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploadService avatarUploadService) : ControllerBase
 {
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
@@ -23,7 +24,8 @@ public class AuthController(AppDbContext db, IConfiguration config) : Controller
             nombre = empleado.Nombre,
             apellido = empleado.Apellido,
             username = empleado.Username,
-            rol = empleado.Rol.ToString()
+            rol = empleado.Rol.ToString(),
+            fotoUrl = empleado.FotoUrl
         });
     }
 
@@ -50,8 +52,32 @@ public class AuthController(AppDbContext db, IConfiguration config) : Controller
             nombre = empleado.Nombre,
             apellido = empleado.Apellido,
             username = empleado.Username,
-            rol = empleado.Rol.ToString()
+            rol = empleado.Rol.ToString(),
+            fotoUrl = empleado.FotoUrl
         });
+    }
+
+    [HttpPost("foto")]
+    public async Task<IActionResult> SubirFoto([FromForm] string username, IFormFile foto)
+    {
+        if (foto.Length == 0)
+            return BadRequest(new { message = "Archivo vacío" });
+        if (foto.Length > 5 * 1024 * 1024)
+            return BadRequest(new { message = "La imagen no puede superar 5MB" });
+        if (!foto.ContentType.StartsWith("image/"))
+            return BadRequest(new { message = "El archivo debe ser una imagen" });
+
+        var empleado = await db.Empleados.FirstOrDefaultAsync(e => e.Username == username && e.Activo);
+        if (empleado is null)
+            return Unauthorized();
+
+        await using var stream = foto.OpenReadStream();
+        var url = await avatarUploadService.UploadAvatarAsync(stream, foto.FileName, foto.ContentType);
+
+        empleado.FotoUrl = url;
+        await db.SaveChangesAsync();
+
+        return Ok(new { fotoUrl = url });
     }
 
     [HttpPatch("cambiar-password")]

@@ -1,6 +1,7 @@
 export const SESSION_COOKIE = "filtcar_session";
 export const USER_COOKIE = "filtcar_user";
 export const ROLE_COOKIE = "filtcar_role";
+export const FOTO_COOKIE = "filtcar_foto";
 
 export type UserRole = "Admin" | "EmpleadoAdmin" | "EmpleadoVentas";
 
@@ -10,4 +11,5 @@ export interface SessionUser {
   apellido: string;
   username: string;
   rol: UserRole;
+  fotoUrl?: string | null;
 }

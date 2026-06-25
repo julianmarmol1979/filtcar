@@ -10,4 +10,5 @@ public class Empleado
     public UserRole Rol { get; set; }
     public bool Activo { get; set; } = true;
     public DateTime CreadoEn { get; set; } = DateTime.UtcNow;
+    public string? FotoUrl { get; set; }
 }

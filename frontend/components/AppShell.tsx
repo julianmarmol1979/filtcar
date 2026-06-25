@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Droplets, KeyRound, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Menu, X, Droplets, Eye, EyeOff, UserPlus } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { AccountMenu } from "@/components/AccountMenu";
 
 const navItems = [
   { href: "/dashboard",    label: "Dashboard",    icon: "⊞" },
@@ -22,7 +23,6 @@ const navItems = [
   { href: "/informes",     label: "Informes",     icon: "📊" },
 ] as const;
 
-interface PwdForm { actual: string; nueva: string; confirmar: string }
 interface NuevoUsuarioForm { nombre: string; apellido: string; username: string; password: string; rol: string }
 
 const ROLES_USUARIO = [
@@ -39,14 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen]             = useState(false);
   const [stockBajo, setStockBajo]   = useState(0);
   const [deudas, setDeudas]         = useState(0);
-  const [pwdOpen, setPwdOpen]       = useState(false);
-  const [pwdForm, setPwdForm]       = useState<PwdForm>({ actual: "", nueva: "", confirmar: "" });
-  const [showActual, setShowActual] = useState(false);
-  const [showNueva, setShowNueva]   = useState(false);
-  const [pwdError, setPwdError]     = useState("");
-  const [pwdOk, setPwdOk]           = useState(false);
-  const [pwdSaving, setPwdSaving]   = useState(false);
-  const [me, setMe]                 = useState<{ username: string; rol: string } | null>(null);
+  const [me, setMe]                 = useState<{ username: string; rol: string; fotoUrl: string | null } | null>(null);
   const [userOpen, setUserOpen]     = useState(false);
   const [userForm, setUserForm]     = useState<NuevoUsuarioForm>(emptyNuevoUsuario);
   const [showUserPwd, setShowUserPwd] = useState(false);
@@ -89,33 +82,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
-  function openPwdModal() {
-    setPwdForm({ actual: "", nueva: "", confirmar: "" });
-    setPwdError(""); setPwdOk(false); setShowActual(false); setShowNueva(false);
-    setPwdOpen(true);
-  }
-
-  async function handleCambiarPwd(e: React.FormEvent) {
-    e.preventDefault();
-    if (pwdForm.nueva !== pwdForm.confirmar) { setPwdError("Las contraseñas nuevas no coinciden"); return; }
-    if (pwdForm.nueva.length < 6) { setPwdError("La contraseña debe tener al menos 6 caracteres"); return; }
-    setPwdSaving(true); setPwdError("");
-    try {
-      const res = await fetch("/api/auth/cambiar-password", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passwordActual: pwdForm.actual, passwordNueva: pwdForm.nueva }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setPwdError(err.message ?? "Error al cambiar la contraseña");
-        return;
-      }
-      setPwdOk(true);
-      setTimeout(() => setPwdOpen(false), 1500);
-    } finally { setPwdSaving(false); }
-  }
-
   function openUserModal() {
     setUserForm(emptyNuevoUsuario);
     setUserError(""); setUserOk(false); setShowUserPwd(false);
@@ -148,20 +114,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       {/* Logo / header */}
       <div className="flex items-start justify-between px-5 py-4 border-b border-gray-700 flex-shrink-0">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg font-bold tracking-wide">FILT-CAR</h1>
           <p className="text-xs text-gray-400">Lubricentro</p>
           {me && (
-            <div className="mt-2.5 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                <span className="text-[10px] font-bold text-white uppercase">
-                  {me.username.charAt(0)}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-200 truncate">{me.username}</p>
-                <p className="text-[10px] text-blue-400">{me.rol}</p>
-              </div>
+            <div className="mt-2.5">
+              <AccountMenu
+                username={me.username}
+                rol={me.rol}
+                fotoUrl={me.fotoUrl}
+                onFotoUpdated={(url) => setMe((prev) => prev && { ...prev, fotoUrl: url })}
+              />
             </div>
           )}
         </div>
@@ -205,12 +168,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Actions + footer */}
       <div className="p-4 border-t border-gray-700 flex-shrink-0 space-y-2">
-        <button
-          onClick={openPwdModal}
-          className="w-full text-left text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"
-        >
-          <KeyRound className="w-3.5 h-3.5" /> Cambiar contraseña
-        </button>
         {me?.rol === "Admin" && (
           <button
             onClick={openUserModal}
@@ -279,94 +236,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-
-      {/* Cambiar contraseña modal */}
-      {pwdOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setPwdOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-bold text-gray-900">Cambiar contraseña</h2>
-              </div>
-              <button onClick={() => setPwdOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {pwdOk ? (
-              <div className="py-8 text-center">
-                <p className="text-green-600 font-semibold text-lg">✓ Contraseña actualizada</p>
-                <p className="text-sm text-gray-400 mt-1">El modal se cerrará en un momento...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCambiarPwd} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Contraseña actual</label>
-                  <div className="relative">
-                    <input
-                      type={showActual ? "text" : "password"}
-                      required
-                      value={pwdForm.actual}
-                      onChange={(e) => setPwdForm({ ...pwdForm, actual: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Tu contraseña actual"
-                    />
-                    <button type="button" onClick={() => setShowActual(!showActual)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showActual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nueva contraseña</label>
-                  <div className="relative">
-                    <input
-                      type={showNueva ? "text" : "password"}
-                      required
-                      value={pwdForm.nueva}
-                      onChange={(e) => setPwdForm({ ...pwdForm, nueva: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Mínimo 6 caracteres"
-                    />
-                    <button type="button" onClick={() => setShowNueva(!showNueva)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showNueva ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Confirmar nueva contraseña</label>
-                  <input
-                    type="password"
-                    required
-                    value={pwdForm.confirmar}
-                    onChange={(e) => setPwdForm({ ...pwdForm, confirmar: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Repetí la nueva contraseña"
-                  />
-                </div>
-
-                {pwdError && <p className="text-sm text-red-600 font-medium">{pwdError}</p>}
-
-                <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setPwdOpen(false)}
-                    className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={pwdSaving}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
-                    {pwdSaving ? "Guardando..." : "Cambiar"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Agregar usuario modal (solo Admin) */}
       {userOpen && (

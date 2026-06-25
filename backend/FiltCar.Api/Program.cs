@@ -1,11 +1,14 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IAvatarUploadService, AvatarUploadService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
