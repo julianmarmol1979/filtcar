@@ -26,6 +26,18 @@ export async function requireAdmin(): Promise<{ ok: true } | { ok: false; respon
   return { ok: true };
 }
 
+export async function requireAdminOrEmpleadoAdmin(): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth;
+
+  const jar = await cookies();
+  const rol = jar.get(ROLE_COOKIE)?.value;
+  if (rol !== "Admin" && rol !== "EmpleadoAdmin") {
+    return { ok: false, response: NextResponse.json({ message: "No tenés permiso para ver esta sección" }, { status: 403 }) };
+  }
+  return { ok: true };
+}
+
 export async function getCurrentUsername(): Promise<string | null> {
   const jar = await cookies();
   return jar.get(USER_COOKIE)?.value ?? null;

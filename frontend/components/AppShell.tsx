@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Droplets, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Menu, X, Droplets, ShieldCheck } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { AccountMenu } from "@/components/AccountMenu";
@@ -13,7 +13,6 @@ const navItems = [
   { href: "/articulos",    label: "Artículos",    icon: "📦", badge: "stockBajo" },
   { href: "/clientes",     label: "Clientes",     icon: "👤" },
   { href: "/proveedores",  label: "Proveedores",  icon: "🏭" },
-  { href: "/empleados",    label: "Empleados",    icon: "👷" },
   { href: "/ventas",       label: "Ventas",       icon: "💰" },
   { href: "/presupuestos", label: "Presupuestos", icon: "📋" },
   { href: "/deudas",       label: "Deudas",       icon: "💳", badge: "deudas" },
@@ -23,15 +22,9 @@ const navItems = [
   { href: "/informes",     label: "Informes",     icon: "📊" },
 ] as const;
 
-interface NuevoUsuarioForm { nombre: string; apellido: string; username: string; password: string; rol: string }
-
-const ROLES_USUARIO = [
-  { value: "Admin",          label: "Administrador" },
-  { value: "EmpleadoAdmin",  label: "Empleado Admin" },
-  { value: "EmpleadoVentas", label: "Vendedor" },
-];
-
-const emptyNuevoUsuario: NuevoUsuarioForm = { nombre: "", apellido: "", username: "", password: "", rol: "EmpleadoVentas" };
+const adminNavItems = [
+  { href: "/usuarios", label: "Usuarios", icon: "🔐" },
+] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,12 +33,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [stockBajo, setStockBajo]   = useState(0);
   const [deudas, setDeudas]         = useState(0);
   const [me, setMe]                 = useState<{ username: string; rol: string; fotoUrl: string | null } | null>(null);
-  const [userOpen, setUserOpen]     = useState(false);
-  const [userForm, setUserForm]     = useState<NuevoUsuarioForm>(emptyNuevoUsuario);
-  const [showUserPwd, setShowUserPwd] = useState(false);
-  const [userError, setUserError]   = useState("");
-  const [userOk, setUserOk]         = useState(false);
-  const [userSaving, setUserSaving] = useState(false);
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
@@ -82,33 +69,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
-  function openUserModal() {
-    setUserForm(emptyNuevoUsuario);
-    setUserError(""); setUserOk(false); setShowUserPwd(false);
-    setUserOpen(true);
-  }
-
-  async function handleCrearUsuario(e: React.FormEvent) {
-    e.preventDefault();
-    if (userForm.password.length < 6) { setUserError("La contraseña debe tener al menos 6 caracteres"); return; }
-    setUserSaving(true); setUserError("");
-    try {
-      const res = await fetch("/api/empleados", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userForm),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setUserError(err.message ?? "Error al crear el usuario");
-        return;
-      }
-      setUserOk(true);
-      setTimeout(() => setUserOpen(false), 1500);
-    } finally { setUserSaving(false); }
-  }
-
   const badges: Record<string, number> = { stockBajo, deudas };
+  const canSeeAdminSection = me?.rol === "Admin" || me?.rol === "EmpleadoAdmin";
 
   const sidebarContent = (
     <>
@@ -164,18 +126,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+
+        {canSeeAdminSection && (
+          <>
+            <div className="flex items-center gap-2 px-5 pt-4 pb-1.5">
+              <ShieldCheck className="w-3 h-3 text-gray-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Administración</span>
+            </div>
+            {adminNavItems.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  }`}
+                >
+                  <span className="text-base w-5 text-center">{item.icon}</span>
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
-      {/* Actions + footer */}
+      {/* Footer */}
       <div className="p-4 border-t border-gray-700 flex-shrink-0 space-y-2">
-        {me?.rol === "Admin" && (
-          <button
-            onClick={openUserModal}
-            className="w-full text-left text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"
-          >
-            <UserPlus className="w-3.5 h-3.5" /> Agregar usuario
-          </button>
-        )}
         <button
           onClick={handleLogout}
           className="w-full text-left text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"
@@ -236,93 +216,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-
-      {/* Agregar usuario modal (solo Admin) */}
-      {userOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setUserOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-bold text-gray-900">Agregar usuario</h2>
-              </div>
-              <button onClick={() => setUserOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {userOk ? (
-              <div className="py-8 text-center">
-                <p className="text-green-600 font-semibold text-lg">✓ Usuario creado</p>
-                <p className="text-sm text-gray-400 mt-1">El modal se cerrará en un momento...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCrearUsuario} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre</label>
-                    <input type="text" required value={userForm.nombre}
-                      onChange={(e) => setUserForm({ ...userForm, nombre: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Juan" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Apellido</label>
-                    <input type="text" required value={userForm.apellido}
-                      onChange={(e) => setUserForm({ ...userForm, apellido: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="García" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Usuario</label>
-                  <input type="text" required value={userForm.username}
-                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value.toLowerCase().replace(/\s/g, "") })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="juangarcia" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Contraseña</label>
-                  <div className="relative">
-                    <input type={showUserPwd ? "text" : "password"} required value={userForm.password}
-                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Mínimo 6 caracteres" minLength={6} />
-                    <button type="button" onClick={() => setShowUserPwd(!showUserPwd)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showUserPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Rol</label>
-                  <select required value={userForm.rol} onChange={(e) => setUserForm({ ...userForm, rol: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    {ROLES_USUARIO.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                </div>
-
-                {userError && <p className="text-sm text-red-600 font-medium">{userError}</p>}
-
-                <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setUserOpen(false)}
-                    className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={userSaving}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
-                    {userSaving ? "Creando..." : "Crear usuario"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

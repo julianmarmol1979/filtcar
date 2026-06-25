@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, UserCog, Eye, EyeOff, Download } from "lucide-react";
+import { Plus, Pencil, Search, X, UserCog, Eye, EyeOff, Download, ShieldAlert } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 
-interface Empleado {
+interface Usuario {
   id: number;
   nombre: string;
   apellido: string;
@@ -28,13 +28,14 @@ const rolStyle: Record<string, string> = {
 
 const emptyForm = { nombre: "", apellido: "", username: "", password: "", rol: "EmpleadoVentas" };
 
-export default function EmpleadosPage() {
-  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+export default function UsuariosPage() {
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isAdmin, setIsAdmin]     = useState(false);
+  const [forbidden, setForbidden] = useState(false);
   const [search, setSearch]       = useState("");
   const [loading, setLoading]     = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing]     = useState<Empleado | null>(null);
+  const [editing, setEditing]     = useState<Usuario | null>(null);
   const [form, setForm]           = useState(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -43,35 +44,36 @@ export default function EmpleadosPage() {
   const [pageSize, setPageSize]   = useState(10);
   const [selected, setSelected]   = useState<Set<number>>(new Set());
 
-  const fetchEmpleados = useCallback(async (q = "") => {
+  const fetchUsuarios = useCallback(async (q = "") => {
     setLoading(true); setPage(1); setSelected(new Set());
     try {
-      const res  = await fetch(`/api/empleados${q ? `?search=${encodeURIComponent(q)}` : ""}`);
+      const res = await fetch(`/api/usuarios${q ? `?search=${encodeURIComponent(q)}` : ""}`);
+      if (res.status === 403) { setForbidden(true); setUsuarios([]); return; }
       const data = await res.json();
-      setEmpleados(data);
+      setUsuarios(Array.isArray(data) ? data : []);
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchEmpleados(); }, [fetchEmpleados]);
+  useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
   useEffect(() => {
-    const t = setTimeout(() => fetchEmpleados(search), 300);
+    const t = setTimeout(() => fetchUsuarios(search), 300);
     return () => clearTimeout(t);
-  }, [search, fetchEmpleados]);
+  }, [search, fetchUsuarios]);
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then((d) => setIsAdmin(d?.rol === "Admin"));
   }, []);
 
-  const paged = empleados.slice((page - 1) * pageSize, page * pageSize);
-  const allSelected = empleados.length > 0 && empleados.every((e) => selected.has(e.id));
+  const paged = usuarios.slice((page - 1) * pageSize, page * pageSize);
+  const allSelected = usuarios.length > 0 && usuarios.every((e) => selected.has(e.id));
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(empleados.map((e) => e.id)));
+    setSelected(allSelected ? new Set() : new Set(usuarios.map((e) => e.id)));
   }
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
   async function handleExport() {
-    const toExport = selected.size > 0 ? empleados.filter((e) => selected.has(e.id)) : empleados;
+    const toExport = selected.size > 0 ? usuarios.filter((e) => selected.has(e.id)) : usuarios;
     await exportToExcel(
       toExport.map((e) => ({
         Apellido: e.apellido,
@@ -80,12 +82,12 @@ export default function EmpleadosPage() {
         Rol: ROLES.find((r) => r.value === e.rol)?.label ?? e.rol,
         Estado: e.activo ? "Activo" : "Inactivo",
       })),
-      "empleados"
+      "usuarios"
     );
   }
 
   function openCreate() { setEditing(null); setForm(emptyForm); setShowPassword(false); setError(""); setModalOpen(true); }
-  function openEdit(e: Empleado) {
+  function openEdit(e: Usuario) {
     setEditing(e);
     setForm({ nombre: e.nombre, apellido: e.apellido, username: e.username, password: "", rol: e.rol });
     setShowPassword(false); setError(""); setModalOpen(true);
@@ -95,30 +97,39 @@ export default function EmpleadosPage() {
   async function handleSave(ev: React.FormEvent) {
     ev.preventDefault(); setSaving(true); setError("");
     try {
-      const url    = editing ? `/api/empleados/${editing.id}` : "/api/empleados";
+      const url    = editing ? `/api/usuarios/${editing.id}` : "/api/usuarios";
       const method = editing ? "PUT" : "POST";
       const body   = editing ? { ...form, password: form.password || null } : form;
       const res    = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) { const err = await res.json().catch(() => ({})); setError(err.message ?? "Error al guardar"); return; }
-      closeModal(); fetchEmpleados(search);
+      closeModal(); fetchUsuarios(search);
     } finally { setSaving(false); }
   }
 
-  async function handleToggle(e: Empleado) {
-    const res = await fetch(`/api/empleados/${e.id}/toggle`, { method: "PATCH" });
+  async function handleToggle(e: Usuario) {
+    const res = await fetch(`/api/usuarios/${e.id}/toggle`, { method: "PATCH" });
     if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.message ?? "No se puede cambiar el estado"); return; }
-    setEmpleados((prev) => prev.map((x) => (x.id === e.id ? { ...x, activo: !x.activo } : x)));
+    setUsuarios((prev) => prev.map((x) => (x.id === e.id ? { ...x, activo: !x.activo } : x)));
+  }
+
+  if (forbidden) {
+    return (
+      <div className="py-20 flex flex-col items-center gap-2 text-gray-400">
+        <ShieldAlert className="w-10 h-10" />
+        <p className="text-sm font-medium">No tenés permiso para ver esta sección</p>
+      </div>
+    );
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Empleados</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Usuarios</h1>
           <p className="text-sm text-gray-500 mt-0.5">Usuarios y roles del sistema</p>
         </div>
         <div className="flex items-center gap-2">
-          {!loading && empleados.length > 0 && (
+          {!loading && usuarios.length > 0 && (
             <button onClick={handleExport} className="flex items-center gap-2 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -129,7 +140,7 @@ export default function EmpleadosPage() {
           {isAdmin && (
             <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nuevo empleado</span>
+              <span className="hidden sm:inline">Nuevo usuario</span>
             </button>
           )}
         </div>
@@ -150,10 +161,10 @@ export default function EmpleadosPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Cargando...</div>
-        ) : empleados.length === 0 ? (
+        ) : usuarios.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
             <UserCog className="w-10 h-10" />
-            <p className="text-sm font-medium">{search ? "Sin resultados para la búsqueda" : "No hay empleados cargados"}</p>
+            <p className="text-sm font-medium">{search ? "Sin resultados para la búsqueda" : "No hay usuarios cargados"}</p>
           </div>
         ) : (
           <>
@@ -209,7 +220,7 @@ export default function EmpleadosPage() {
               </tbody>
             </table>
             </div>
-            <Pagination total={empleados.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+            <Pagination total={usuarios.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
           </>
         )}
       </div>
@@ -219,7 +230,7 @@ export default function EmpleadosPage() {
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">{editing ? "Editar empleado" : "Nuevo empleado"}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{editing ? "Editar usuario" : "Nuevo usuario"}</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSave} className="space-y-4">
@@ -269,7 +280,7 @@ export default function EmpleadosPage() {
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
                 <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
-                  {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear empleado"}
+                  {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear usuario"}
                 </button>
               </div>
             </form>
