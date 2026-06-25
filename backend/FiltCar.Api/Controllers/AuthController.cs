@@ -58,8 +58,10 @@ public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploa
     }
 
     [HttpPost("foto")]
-    public async Task<IActionResult> SubirFoto([FromForm] string username, IFormFile foto)
+    public async Task<IActionResult> SubirFoto([FromForm] string username, [FromForm] IFormFile foto)
     {
+        if (string.IsNullOrEmpty(username))
+            return Unauthorized(new { message = "Usuario requerido" });
         if (foto.Length == 0)
             return BadRequest(new { message = "Archivo vacío" });
         if (foto.Length > 5 * 1024 * 1024)
@@ -69,10 +71,18 @@ public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploa
 
         var empleado = await db.Empleados.FirstOrDefaultAsync(e => e.Username == username && e.Activo);
         if (empleado is null)
-            return Unauthorized();
+            return Unauthorized(new { message = "Usuario no encontrado" });
 
-        await using var stream = foto.OpenReadStream();
-        var url = await avatarUploadService.UploadAvatarAsync(stream, foto.FileName, foto.ContentType);
+        string url;
+        try
+        {
+            await using var stream = foto.OpenReadStream();
+            url = await avatarUploadService.UploadAvatarAsync(stream, foto.FileName, foto.ContentType);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Error al subir a Supabase: {ex.Message}" });
+        }
 
         empleado.FotoUrl = url;
         await db.SaveChangesAsync();
