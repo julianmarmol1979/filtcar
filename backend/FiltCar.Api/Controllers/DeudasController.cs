@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class DeudasController(AppDbContext db) : ControllerBase
+public class DeudasController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     // ── GET /api/deudas ──────────────────────────────────────────────────────
     [HttpGet]
@@ -75,6 +76,7 @@ public class DeudasController(AppDbContext db) : ControllerBase
             deuda.Venta.MontoPagado    += req.Monto;
             deuda.Venta.SaldoPendiente -= req.Monto;
 
+            logger.Log(req.Username, "DeudaPago", $"Registró un pago de deuda por ${req.Monto:N2}" + (deuda.Cancelada ? " (saldada)" : ""));
             await db.SaveChangesAsync();
             await tx.CommitAsync();
 

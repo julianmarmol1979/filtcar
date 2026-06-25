@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ArticulosController(AppDbContext db) : ControllerBase
+public class ArticulosController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? search)
@@ -56,6 +57,7 @@ public class ArticulosController(AppDbContext db) : ControllerBase
         };
 
         db.Articulos.Add(articulo);
+        logger.Log(req.Username, "ArticuloCreate", $"Creó el artículo \"{articulo.Marca} {articulo.Modelo}\"");
         await db.SaveChangesAsync();
         return Ok(articulo);
     }
@@ -72,17 +74,19 @@ public class ArticulosController(AppDbContext db) : ControllerBase
         articulo.Stock       = req.Stock;
         articulo.Precio      = req.Precio;
 
+        logger.Log(req.Username, "ArticuloUpdate", $"Actualizó el artículo \"{articulo.Marca} {articulo.Modelo}\"");
         await db.SaveChangesAsync();
         return Ok(articulo);
     }
 
     [HttpPatch("{id}/toggle")]
-    public async Task<IActionResult> Toggle(int id)
+    public async Task<IActionResult> Toggle(int id, [FromQuery] string? username)
     {
         var articulo = await db.Articulos.FindAsync(id);
         if (articulo is null) return NotFound();
 
         articulo.Activo = !articulo.Activo;
+        logger.Log(username, "ArticuloToggle", $"{(articulo.Activo ? "Activó" : "Desactivó")} el artículo \"{articulo.Marca} {articulo.Modelo}\"");
         await db.SaveChangesAsync();
         return Ok(new { articulo.Id, articulo.Activo });
     }
@@ -93,5 +97,6 @@ public record ArticuloRequest(
     string Modelo,
     string? Descripcion,
     int Stock,
-    decimal Precio
+    decimal Precio,
+    string? Username = null
 );

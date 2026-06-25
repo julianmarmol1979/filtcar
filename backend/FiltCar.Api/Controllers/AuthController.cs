@@ -7,7 +7,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploadService avatarUploadService) : ControllerBase
+public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploadService avatarUploadService, ActivityLogger logger) : ControllerBase
 {
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
@@ -17,6 +17,9 @@ public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploa
 
         if (empleado is null || !BCrypt.Net.BCrypt.Verify(req.Password, empleado.PasswordHash))
             return Unauthorized(new { message = "Credenciales incorrectas" });
+
+        logger.Log(empleado.Username, "Login", "Inició sesión");
+        await db.SaveChangesAsync();
 
         return Ok(new
         {
@@ -85,6 +88,7 @@ public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploa
         }
 
         empleado.FotoUrl = url;
+        logger.Log(username, "SubirFoto", "Actualizó su foto de perfil");
         await db.SaveChangesAsync();
 
         return Ok(new { fotoUrl = url });
@@ -107,6 +111,7 @@ public class AuthController(AppDbContext db, IConfiguration config, IAvatarUploa
             return BadRequest(new { message = "La contraseña debe tener al menos 6 caracteres" });
 
         empleado.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.PasswordNueva);
+        logger.Log(req.Username, "CambiarPassword", "Cambió su contraseña");
         await db.SaveChangesAsync();
         return Ok();
     }

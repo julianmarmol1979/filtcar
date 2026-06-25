@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, proxyFetch } from "@/lib/server-auth";
+import { requireAuth, getCurrentUsername, proxyFetch } from "@/lib/server-auth";
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -18,10 +18,11 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
 
+  const username = await getCurrentUsername();
   const body = await request.json();
   const res = await proxyFetch("/api/proveedores", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, username }),
   });
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });

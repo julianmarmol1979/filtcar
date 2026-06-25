@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, proxyFetch } from "@/lib/server-auth";
+import { requireAdmin, getCurrentUsername, proxyFetch } from "@/lib/server-auth";
 
 export async function PATCH(
   _request: Request,
@@ -8,8 +8,9 @@ export async function PATCH(
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
+  const username = await getCurrentUsername();
   const { id } = await params;
-  const res = await proxyFetch(`/api/empleados/${id}/toggle`, { method: "PATCH" });
+  const res = await proxyFetch(`/api/empleados/${id}/toggle?username=${encodeURIComponent(username ?? "")}`, { method: "PATCH" });
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }

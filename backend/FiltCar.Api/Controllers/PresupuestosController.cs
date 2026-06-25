@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PresupuestosController(AppDbContext db) : ControllerBase
+public class PresupuestosController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -113,6 +114,7 @@ public class PresupuestosController(AppDbContext db) : ControllerBase
         };
 
         db.Presupuestos.Add(presupuesto);
+        logger.Log(req.Username, "PresupuestoCreate", $"Creó un presupuesto por ${total:N2}");
         await db.SaveChangesAsync();
 
         return Ok(new { presupuesto.Id, presupuesto.Total, presupuesto.Fecha });

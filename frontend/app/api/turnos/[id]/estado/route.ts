@@ -1,14 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { requireAuth, getCurrentUsername, proxyFetch } from "@/lib/server-auth";
 
-const API = process.env.BACKEND_URL ?? "http://localhost:5000";
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const username = await getCurrentUsername();
   const { id } = await params;
-  const body   = await req.json();
-  const res    = await fetch(`${API}/api/turnos/${id}/estado`, {
+  const body = await request.json();
+  const res = await proxyFetch(`/api/turnos/${id}/estado`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, username }),
   });
   return NextResponse.json({}, { status: res.status });
 }

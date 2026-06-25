@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ComprasController(AppDbContext db) : ControllerBase
+public class ComprasController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -125,6 +126,7 @@ public class ComprasController(AppDbContext db) : ControllerBase
             };
 
             db.Compras.Add(compra);
+            logger.Log(req.Username, "CompraCreate", $"Registró una compra a \"{proveedor.Nombre}\" por ${total:N2}");
             await db.SaveChangesAsync();
             await tx.CommitAsync();
 

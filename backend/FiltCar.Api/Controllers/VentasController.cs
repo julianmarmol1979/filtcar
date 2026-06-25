@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class VentasController(AppDbContext db) : ControllerBase
+public class VentasController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     // ── GET /api/ventas ──────────────────────────────────────────────────────
     [HttpGet]
@@ -154,6 +155,7 @@ public class VentasController(AppDbContext db) : ControllerBase
             };
 
             db.Ventas.Add(venta);
+            logger.Log(req.Username, "VentaCreate", $"Registró una venta por ${total:N2}" + (formaPago == PaymentMethod.Deuda ? " (en deuda)" : ""));
             await db.SaveChangesAsync();
 
             if (formaPago == PaymentMethod.Deuda)

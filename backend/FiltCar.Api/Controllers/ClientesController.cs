@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ClientesController(AppDbContext db) : ControllerBase
+public class ClientesController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? search)
@@ -57,6 +58,7 @@ public class ClientesController(AppDbContext db) : ControllerBase
         };
 
         db.Clientes.Add(cliente);
+        logger.Log(req.Username, "ClienteCreate", $"Creó el cliente \"{cliente.Apellido}, {cliente.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(cliente);
     }
@@ -73,17 +75,19 @@ public class ClientesController(AppDbContext db) : ControllerBase
         cliente.Email     = req.Email?.Trim().ToLower();
         cliente.Direccion = req.Direccion?.Trim();
 
+        logger.Log(req.Username, "ClienteUpdate", $"Actualizó el cliente \"{cliente.Apellido}, {cliente.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(cliente);
     }
 
     [HttpPatch("{id}/toggle")]
-    public async Task<IActionResult> Toggle(int id)
+    public async Task<IActionResult> Toggle(int id, [FromQuery] string? username)
     {
         var cliente = await db.Clientes.FindAsync(id);
         if (cliente is null) return NotFound();
 
         cliente.Activo = !cliente.Activo;
+        logger.Log(username, "ClienteToggle", $"{(cliente.Activo ? "Activó" : "Desactivó")} el cliente \"{cliente.Apellido}, {cliente.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(new { cliente.Id, cliente.Activo });
     }
@@ -135,5 +139,6 @@ public record ClienteRequest(
     string Apellido,
     string? Telefono,
     string? Email,
-    string? Direccion
+    string? Direccion,
+    string? Username = null
 );

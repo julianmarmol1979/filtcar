@@ -23,7 +23,8 @@ const navItems = [
 ] as const;
 
 const adminNavItems = [
-  { href: "/usuarios", label: "Usuarios", icon: "🔐" },
+  { href: "/usuarios",   label: "Usuarios",   icon: "🔐", roles: ["Admin", "EmpleadoAdmin"] },
+  { href: "/auditoria",  label: "Auditoría",  icon: "📜", roles: ["Admin"] },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -71,6 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const badges: Record<string, number> = { stockBajo, deudas };
   const canSeeAdminSection = me?.rol === "Admin" || me?.rol === "EmpleadoAdmin";
+  const visibleAdminItems = adminNavItems.filter((item) => me && (item.roles as readonly string[]).includes(me.rol));
 
   const sidebarContent = (
     <>
@@ -127,13 +129,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
 
-        {canSeeAdminSection && (
+        {canSeeAdminSection && visibleAdminItems.length > 0 && (
           <>
             <div className="flex items-center gap-2 px-5 pt-4 pb-1.5">
               <ShieldCheck className="w-3 h-3 text-gray-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Administración</span>
             </div>
-            {adminNavItems.map((item) => {
+            {visibleAdminItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link

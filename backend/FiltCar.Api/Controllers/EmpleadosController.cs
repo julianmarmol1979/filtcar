@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EmpleadosController(AppDbContext db) : ControllerBase
+public class EmpleadosController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? search)
@@ -58,6 +59,7 @@ public class EmpleadosController(AppDbContext db) : ControllerBase
         };
 
         db.Empleados.Add(empleado);
+        logger.Log(req.ActorUsername, "UsuarioCreate", $"Creó el usuario \"{empleado.Username}\" ({empleado.Rol})");
         await db.SaveChangesAsync();
         return Ok(new { empleado.Id, empleado.Nombre, empleado.Apellido, empleado.Username, Rol = empleado.Rol.ToString(), empleado.Activo });
     }
@@ -81,12 +83,13 @@ public class EmpleadosController(AppDbContext db) : ControllerBase
         if (!string.IsNullOrWhiteSpace(req.Password))
             empleado.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password, 11);
 
+        logger.Log(req.ActorUsername, "UsuarioUpdate", $"Actualizó el usuario \"{empleado.Username}\"");
         await db.SaveChangesAsync();
         return Ok(new { empleado.Id, empleado.Nombre, empleado.Apellido, empleado.Username, Rol = empleado.Rol.ToString(), empleado.Activo });
     }
 
     [HttpPatch("{id}/toggle")]
-    public async Task<IActionResult> Toggle(int id)
+    public async Task<IActionResult> Toggle(int id, [FromQuery] string? username)
     {
         var empleado = await db.Empleados.FindAsync(id);
         if (empleado is null) return NotFound();
@@ -95,6 +98,7 @@ public class EmpleadosController(AppDbContext db) : ControllerBase
             return BadRequest(new { message = "No se puede desactivar el usuario administrador" });
 
         empleado.Activo = !empleado.Activo;
+        logger.Log(username, "UsuarioToggle", $"{(empleado.Activo ? "Activó" : "Desactivó")} el usuario \"{empleado.Username}\"");
         await db.SaveChangesAsync();
         return Ok(new { empleado.Id, empleado.Activo });
     }
@@ -105,7 +109,8 @@ public record EmpleadoCreateRequest(
     string Apellido,
     string Username,
     string Password,
-    string Rol
+    string Rol,
+    string? ActorUsername = null
 );
 
 public record EmpleadoUpdateRequest(
@@ -113,5 +118,6 @@ public record EmpleadoUpdateRequest(
     string Apellido,
     string Username,
     string? Password,
-    string Rol
+    string Rol,
+    string? ActorUsername = null
 );

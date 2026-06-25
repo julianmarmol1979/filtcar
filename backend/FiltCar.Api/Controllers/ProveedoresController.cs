@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProveedoresController(AppDbContext db) : ControllerBase
+public class ProveedoresController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? search)
@@ -55,6 +56,7 @@ public class ProveedoresController(AppDbContext db) : ControllerBase
         };
 
         db.Proveedores.Add(proveedor);
+        logger.Log(req.Username, "ProveedorCreate", $"Creó el proveedor \"{proveedor.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(proveedor);
     }
@@ -70,17 +72,19 @@ public class ProveedoresController(AppDbContext db) : ControllerBase
         proveedor.Telefono = req.Telefono?.Trim();
         proveedor.Email    = req.Email?.Trim().ToLower();
 
+        logger.Log(req.Username, "ProveedorUpdate", $"Actualizó el proveedor \"{proveedor.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(proveedor);
     }
 
     [HttpPatch("{id}/toggle")]
-    public async Task<IActionResult> Toggle(int id)
+    public async Task<IActionResult> Toggle(int id, [FromQuery] string? username)
     {
         var proveedor = await db.Proveedores.FindAsync(id);
         if (proveedor is null) return NotFound();
 
         proveedor.Activo = !proveedor.Activo;
+        logger.Log(username, "ProveedorToggle", $"{(proveedor.Activo ? "Activó" : "Desactivó")} el proveedor \"{proveedor.Nombre}\"");
         await db.SaveChangesAsync();
         return Ok(new { proveedor.Id, proveedor.Activo });
     }
@@ -90,5 +94,6 @@ public record ProveedorRequest(
     string Nombre,
     string? Contacto,
     string? Telefono,
-    string? Email
+    string? Email,
+    string? Username = null
 );

@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TurnosController(AppDbContext db) : ControllerBase
+public class TurnosController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     // GET /api/turnos?from=2026-05-06&to=2026-05-12
     [HttpGet]
@@ -65,6 +66,7 @@ public class TurnosController(AppDbContext db) : ControllerBase
             CreadaEn      = DateTime.UtcNow,
         };
         db.Turnos.Add(turno);
+        logger.Log(req.Username, "TurnoCreate", $"Creó un turno para \"{turno.ClienteNombre ?? "cliente sin nombre"}\" ({turno.Servicio})");
         await db.SaveChangesAsync();
         return Ok(new { turno.Id });
     }
@@ -85,6 +87,7 @@ public class TurnosController(AppDbContext db) : ControllerBase
         turno.Observacion   = req.Observacion;
         turno.EmpleadoId    = req.EmpleadoId;
 
+        logger.Log(req.Username, "TurnoUpdate", $"Actualizó el turno de \"{turno.ClienteNombre ?? "cliente sin nombre"}\"");
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -101,16 +104,18 @@ public class TurnosController(AppDbContext db) : ControllerBase
             return BadRequest(new { message = "Estado inválido" });
 
         turno.Estado = req.Estado;
+        logger.Log(req.Username, "TurnoEstado", $"Cambió el turno de \"{turno.ClienteNombre ?? "cliente sin nombre"}\" a {req.Estado}");
         await db.SaveChangesAsync();
         return Ok();
     }
 
     // DELETE /api/turnos/{id}
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromQuery] string? username)
     {
         var turno = await db.Turnos.FindAsync(id);
         if (turno is null) return NotFound();
+        logger.Log(username, "TurnoDelete", $"Eliminó el turno de \"{turno.ClienteNombre ?? "cliente sin nombre"}\"");
         db.Turnos.Remove(turno);
         await db.SaveChangesAsync();
         return Ok();
@@ -125,7 +130,8 @@ public record TurnoRequest(
     string?  Vehiculo,
     string   Servicio,
     string?  Observacion,
-    int?     EmpleadoId
+    int?     EmpleadoId,
+    string?  Username = null
 );
 
-public record EstadoRequest(string Estado);
+public record EstadoRequest(string Estado, string? Username = null);

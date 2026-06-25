@@ -1,5 +1,6 @@
 using FiltCar.Api.Data;
 using FiltCar.Api.Models;
+using FiltCar.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace FiltCar.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CajaController(AppDbContext db) : ControllerBase
+public class CajaController(AppDbContext db, ActivityLogger logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -54,6 +55,7 @@ public class CajaController(AppDbContext db) : ControllerBase
         };
 
         db.CajaMovimientos.Add(movimiento);
+        logger.Log(req.Username, "CajaMovimiento", $"Registró un movimiento de caja: {movimiento.Tipo} ${movimiento.Monto:N2}");
         await db.SaveChangesAsync();
 
         return Ok(new

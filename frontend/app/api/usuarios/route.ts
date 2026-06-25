@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, requireAdminOrEmpleadoAdmin, proxyFetch } from "@/lib/server-auth";
+import { requireAdmin, requireAdminOrEmpleadoAdmin, getCurrentUsername, proxyFetch } from "@/lib/server-auth";
 
 export async function GET(request: Request) {
   const auth = await requireAdminOrEmpleadoAdmin();
@@ -18,10 +18,11 @@ export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
+  const actorUsername = await getCurrentUsername();
   const body = await request.json();
   const res = await proxyFetch("/api/empleados", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, actorUsername }),
   });
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
