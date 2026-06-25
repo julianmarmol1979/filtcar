@@ -46,24 +46,21 @@ app.Run();
 
 static void SeedAdmin(AppDbContext db)
 {
-    var admin = db.Empleados.FirstOrDefault(e => e.Username == "admin");
-    if (admin is null)
+    // Only create the admin user if it doesn't exist yet — never touch an existing
+    // admin's password here, otherwise every redeploy/restart would silently
+    // overwrite whatever password the user has set since.
+    var exists = db.Empleados.Any(e => e.Username == "admin");
+    if (exists) return;
+
+    db.Empleados.Add(new Empleado
     {
-        db.Empleados.Add(new Empleado
-        {
-            Nombre = "Admin",
-            Apellido = "FiltCar",
-            Username = "admin",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("filtcar2026", 11),
-            Rol = UserRole.Admin,
-            Activo = true,
-            CreadoEn = DateTime.UtcNow
-        });
-    }
-    else
-    {
-        // Reset password on every deploy to keep it in sync
-        admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword("filtcar2026", 11);
-    }
+        Nombre = "Admin",
+        Apellido = "FiltCar",
+        Username = "admin",
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword("filtcar2026", 11),
+        Rol = UserRole.Admin,
+        Activo = true,
+        CreadoEn = DateTime.UtcNow
+    });
     db.SaveChanges();
 }
