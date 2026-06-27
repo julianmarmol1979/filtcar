@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Droplets, ShieldCheck } from "lucide-react";
+import { Menu, X, Droplets, ShieldCheck, Lock } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { AccountMenu } from "@/components/AccountMenu";
@@ -34,11 +34,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [stockBajo, setStockBajo]   = useState(0);
   const [deudas, setDeudas]         = useState(0);
   const [me, setMe]                 = useState<{ username: string; rol: string; fotoUrl: string | null } | null>(null);
+  const [licencia, setLicencia]     = useState<{ bloqueada: boolean; plan: string; fechaVencimiento: string | null } | null>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setMe(d); });
+    fetch("/api/licencia").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setLicencia(d); });
   }, []);
 
   useEffect(() => {
@@ -171,6 +173,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </>
   );
+
+  if (licencia?.bloqueada) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Lock className="w-8 h-8 text-red-600" />
+          </div>
+          <h1 className="text-xl font-extrabold text-gray-900 mb-2">Licencia inactiva</h1>
+          <p className="text-sm text-gray-500 mb-1">
+            La licencia de FILT-CAR para este lubricentro está vencida o fue desactivada.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Contactá a Skylia para renovarla y volver a acceder al sistema.
+          </p>
+          <button
+            onClick={handleLogout}
+            className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">

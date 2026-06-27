@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="FiltCar.Api.Tests/FiltCar.Api.Tests.csproj" />
+  <Project Path="FiltCar.Api/FiltCar.Api.csproj" />
+</Solution>

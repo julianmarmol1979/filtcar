@@ -47,6 +47,14 @@ public class EmpleadosController(AppDbContext db, ActivityLogger logger) : Contr
         if (await db.Empleados.AnyAsync(e => e.Username == req.Username))
             return BadRequest(new { message = "El nombre de usuario ya existe" });
 
+        var licencia = await db.Licencias.FirstOrDefaultAsync();
+        if (licencia?.MaxUsuarios is int maxUsuarios)
+        {
+            var activos = await db.Empleados.CountAsync(e => e.Activo);
+            if (activos >= maxUsuarios)
+                return BadRequest(new { message = $"Llegaste al límite de usuarios de tu plan ({licencia.Plan}: {maxUsuarios}). Contactá a Skylia para ampliarlo." });
+        }
+
         var empleado = new Empleado
         {
             Nombre       = req.Nombre.Trim(),
@@ -96,6 +104,17 @@ public class EmpleadosController(AppDbContext db, ActivityLogger logger) : Contr
 
         if (empleado.Username == "admin")
             return BadRequest(new { message = "No se puede desactivar el usuario administrador" });
+
+        if (!empleado.Activo)
+        {
+            var licencia = await db.Licencias.FirstOrDefaultAsync();
+            if (licencia?.MaxUsuarios is int maxUsuarios)
+            {
+                var activos = await db.Empleados.CountAsync(e => e.Activo);
+                if (activos >= maxUsuarios)
+                    return BadRequest(new { message = $"Llegaste al límite de usuarios de tu plan ({licencia.Plan}: {maxUsuarios}). Contactá a Skylia para ampliarlo." });
+            }
+        }
 
         empleado.Activo = !empleado.Activo;
         logger.Log(username, "UsuarioToggle", $"{(empleado.Activo ? "Activó" : "Desactivó")} el usuario \"{empleado.Username}\"");

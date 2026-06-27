@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PresupuestoItem> PresupuestoItems => Set<PresupuestoItem>();
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<Licencia> Licencias => Set<Licencia>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

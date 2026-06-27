@@ -4,7 +4,7 @@ import { SESSION_COOKIE } from "@/lib/auth";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/login") || pathname.startsWith("/api")) {
+  if (pathname.startsWith("/login") || pathname.startsWith("/api") || pathname.startsWith("/precios")) {
     return NextResponse.next();
   }
 

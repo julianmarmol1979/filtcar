@@ -44,9 +44,28 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
     SeedAdmin(db);
+    SeedLicencia(db);
 }
 
 app.Run();
+
+static void SeedLicencia(AppDbContext db)
+{
+    // Arranca sin restricciones (sin vencimiento, sin tope de usuarios) hasta que Skylia
+    // configure el plan real vía PUT /api/internal/licencia. Así nunca se bloquea sola
+    // una instalación nueva por falta de configuración.
+    if (db.Licencias.Any()) return;
+
+    db.Licencias.Add(new Licencia
+    {
+        Plan = "Premium",
+        MaxUsuarios = null,
+        FechaVencimiento = null,
+        Activa = true,
+        ActualizadoEn = DateTime.UtcNow
+    });
+    db.SaveChanges();
+}
 
 static void SeedAdmin(AppDbContext db)
 {
