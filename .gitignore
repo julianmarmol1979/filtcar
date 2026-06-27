@@ -5,6 +5,10 @@ obj/
 *.suo
 .vs/
 appsettings.Development.json
+backend/coverage-results/
+
+# Frontend tests
+frontend/coverage/
 
 # Next.js
 frontend/.next/

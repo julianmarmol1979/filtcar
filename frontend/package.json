@@ -27,9 +27,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^5.4.21",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.9"
   }
 }
