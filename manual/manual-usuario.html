@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FILT-CAR — Manual de Usuario</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #1a1a2e;
+    background: #fff;
+  }
+
+  /* ── Print setup ── */
+  @media print {
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    body { font-size: 12px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 16px; }
+    h3 { font-size: 13px; }
+    .cover { page-break-after: always; }
+    .section { page-break-inside: avoid; }
+    img { max-width: 100% !important; }
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 40px; }
+
+  /* ── Cover page ── */
+  .cover {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0b1220 0%, #0f1f3d 50%, #0a2a5c 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    color: #fff;
+  }
+  .cover-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 32px;
+    font-size: 36px;
+  }
+  .cover h1 {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .cover h1 span { color: #3b82f6; }
+  .cover .subtitle {
+    font-size: 20px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 48px;
+    max-width: 500px;
+  }
+  .cover-meta {
+    display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+    margin-top: 40px;
+  }
+  .cover-meta-item { text-align: center; }
+  .cover-meta-item .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: rgba(255,255,255,0.4); margin-bottom: 4px;
+  }
+  .cover-meta-item .value { font-size: 16px; font-weight: 600; color: #3b82f6; }
+  .cover-divider {
+    width: 80px; height: 3px;
+    background: linear-gradient(90deg, #3b82f6, transparent);
+    margin: 32px auto;
+  }
+
+  /* ── TOC ── */
+  .toc-page {
+    padding: 60px 0;
+    min-height: 100vh;
+  }
+  .toc-title {
+    font-size: 28px; font-weight: 800;
+    color: #1a1a2e; margin-bottom: 32px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #2563eb;
+    display: inline-block;
+  }
+  .toc-list { list-style: none; }
+  .toc-list li {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px dotted #e5e7eb;
+    font-size: 14px;
+  }
+  .toc-list li .num {
+    font-weight: 700; color: #2563eb; min-width: 28px; font-size: 15px;
+  }
+  .toc-list li .toc-title-item { flex: 1; color: #1a1a2e; font-weight: 500; }
+  .toc-list li .role-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-admin { background: #fee2e2; color: #991b1b; }
+  .badge-all   { background: #dbeafe; color: #1e40af; }
+  .badge-readonly { background: #fef3c7; color: #92400e; }
+  .toc-section-header {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #9ca3af; font-weight: 600; padding: 16px 0 4px;
+  }
+
+  /* ── Section header ── */
+  .section-page { padding: 50px 0 30px; }
+  .section-chapter {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    color: #2563eb; font-weight: 700; margin-bottom: 8px;
+  }
+  .section-page h2 {
+    font-size: 30px; font-weight: 800; color: #1a1a2e;
+    margin-bottom: 12px; line-height: 1.2;
+  }
+  .section-page .section-lead {
+    font-size: 16px; color: #4b5563; margin-bottom: 28px;
+    max-width: 680px; line-height: 1.6;
+  }
+  .section-divider {
+    height: 3px; width: 60px;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    margin-bottom: 32px; border-radius: 2px;
+  }
+
+  /* ── Sub sections ── */
+  .subsection { margin-bottom: 40px; }
+  .subsection h3 {
+    font-size: 17px; font-weight: 700; color: #1a1a2e;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .subsection h3::before {
+    content: '';
+    display: inline-block; width: 4px; height: 18px;
+    background: #2563eb; border-radius: 2px;
+  }
+  .subsection p { color: #374151; margin-bottom: 10px; }
+
+  /* ── Screenshot ── */
+  .screenshot-wrap {
+    margin: 20px 0 28px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  .screenshot-caption {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    padding: 8px 16px;
+    font-size: 12px; color: #6b7280; font-style: italic;
+  }
+  .screenshot-wrap img {
+    width: 100%; display: block;
+  }
+
+  /* ── Info boxes ── */
+  .info-box {
+    border-radius: 10px; padding: 16px 20px; margin: 16px 0;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .info-box .icon { font-size: 20px; margin-top: 1px; flex-shrink: 0; }
+  .info-box.tip   { background: #eff6ff; border-left: 4px solid #2563eb; }
+  .info-box.note  { background: #f0f9ff; border-left: 4px solid #0ea5e9; }
+  .info-box.warn  { background: #fff1f2; border-left: 4px solid #f43f5e; }
+  .info-box.future { background: #f0fdf4; border-left: 4px solid #10b981; }
+  .info-box p { margin: 0; font-size: 13px; color: #374151; }
+  .info-box strong { color: #111; }
+
+  /* ── Role cards ── */
+  .roles-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    margin: 24px 0;
+  }
+  @media (max-width: 700px) { .roles-grid { grid-template-columns: 1fr; } }
+  .role-card {
+    border-radius: 12px; padding: 24px;
+    border: 1px solid #e5e7eb;
+  }
+  .role-card.admin   { border-top: 4px solid #2563eb; background: #eff6ff; }
+  .role-card.coord   { border-top: 4px solid #f59e0b; background: #fffbeb; }
+  .role-card.tech    { border-top: 4px solid #10b981; background: #f0fdf4; }
+  .role-card .role-name {
+    font-size: 16px; font-weight: 800; margin-bottom: 8px;
+  }
+  .role-card.admin .role-name { color: #1e40af; }
+  .role-card.coord .role-name { color: #92400e; }
+  .role-card.tech  .role-name { color: #065f46; }
+  .role-card p { font-size: 13px; color: #4b5563; margin-bottom: 10px; }
+  .role-card ul { padding-left: 16px; font-size: 12px; color: #4b5563; }
+  .role-card ul li { margin-bottom: 4px; }
+
+  /* ── Feature list ── */
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li {
+    padding: 8px 0; display: flex; align-items: flex-start; gap: 10px;
+    border-bottom: 1px solid #f3f4f6; font-size: 13px; color: #374151;
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feature-list li .fi { color: #2563eb; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Status badges in doc ── */
+  .status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+  .s-activo     { background: rgba(16,185,129,0.15); color: #065f46; }
+  .s-inactivo   { background: rgba(107,114,128,0.15);color: #374151; }
+  .s-pagado     { background: rgba(16,185,129,0.15); color: #065f46; }
+  .s-debe       { background: rgba(244,63,94,0.15);  color: #be123c; }
+  .s-vencido    { background: rgba(244,63,94,0.15);  color: #be123c; }
+  .s-pendiente  { background: rgba(168,85,247,0.15); color: #7c3aed; }
+  .s-confirmado { background: rgba(6,182,212,0.15);  color: #0e7490; }
+  .s-completado { background: rgba(16,185,129,0.15); color: #065f46; }
+  .s-cancelado  { background: rgba(107,114,128,0.15);color: #374151; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: #0b1220; color: #60a5fa; padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
+  td { padding: 9px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  tr:nth-child(even) td { background: #f9fafb; }
+
+  /* ── Future section ── */
+  .future-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 20px 0;
+  }
+  @media (max-width: 600px) { .future-grid { grid-template-columns: 1fr; } }
+  .future-card {
+    border-radius: 12px; padding: 20px;
+    border: 1px dashed #bbf7d0; background: #f0fdf4;
+  }
+  .future-card .fc-icon { font-size: 28px; margin-bottom: 10px; }
+  .future-card h4 { font-size: 15px; font-weight: 700; color: #065f46; margin-bottom: 6px; }
+  .future-card p { font-size: 12px; color: #374151; }
+  .coming-soon {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    background: #10b981; color: #fff; padding: 2px 8px; border-radius: 99px;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+
+  /* ── Footer ── */
+  .doc-footer {
+    margin-top: 60px; padding: 32px 0;
+    border-top: 2px solid #f3f4f6;
+    text-align: center; color: #9ca3af; font-size: 12px;
+  }
+  .doc-footer strong { color: #2563eb; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     PORTADA
+═══════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">💧</div>
+  <h1>FILT<span>-CAR</span></h1>
+  <p class="subtitle">Manual de Usuario — Sistema de Gestión para Lubricentros</p>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="label">Versión</div>
+      <div class="value">1.0</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Año</div>
+      <div class="value">2026</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Desarrollado por</div>
+      <div class="value">Skylia</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════
+     ÍNDICE
+═══════════════════════════════════════════════ -->
+<div class="toc-page page-break">
+  <div class="toc-title">Contenido</div>
+  <ul class="toc-list">
+    <li class="toc-section-header" style="border:none">Introducción</li>
+    <li><span class="num">1</span><span class="toc-title-item">¿Qué es FiltCar?</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">2</span><span class="toc-title-item">Roles del sistema</span><span class="role-badge badge-all">Todos</span></li>
+
+    <li class="toc-section-header" style="border:none">Pantallas principales</li>
+    <li><span class="num">3</span><span class="toc-title-item">Inicio de sesión</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">4</span><span class="toc-title-item">Barra lateral y tu perfil</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">5</span><span class="toc-title-item">Dashboard — Panel de control</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">6</span><span class="toc-title-item">Artículos</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">7</span><span class="toc-title-item">Clientes</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">8</span><span class="toc-title-item">Proveedores</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">9</span><span class="toc-title-item">Ventas</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">10</span><span class="toc-title-item">Presupuestos</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">11</span><span class="toc-title-item">Deudas de clientes</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">12</span><span class="toc-title-item">Caja</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">13</span><span class="toc-title-item">Compras</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">14</span><span class="toc-title-item">Turnos</span><span class="role-badge badge-all">Todos</span></li>
+    <li><span class="num">15</span><span class="toc-title-item">Informes</span><span class="role-badge badge-all">Todos</span></li>
+
+    <li class="toc-section-header" style="border:none">Administración</li>
+    <li><span class="num">16</span><span class="toc-title-item">Usuarios</span><span class="role-badge badge-readonly">Admin / lectura EmpleadoAdmin</span></li>
+    <li><span class="num">17</span><span class="toc-title-item">Auditoría</span><span class="role-badge badge-admin">Admin</span></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     1. ¿QUÉ ES FILTCAR?
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 1</div>
+  <h2>¿Qué es FiltCar?</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    FiltCar es un sistema de gestión pensado para lubricentros: controla ventas, stock de artículos, caja, clientes, proveedores y turnos desde un solo lugar, accesible desde cualquier computadora con internet.
+  </p>
+
+  <div class="subsection">
+    <h3>¿Para qué sirve?</h3>
+    <p>El día a día de un lubricentro implica llevar registros en papel o planillas sueltas: ventas, stock de aceites y filtros, plata en caja, deudas de clientes. FiltCar centraliza todo ese proceso en un sistema único.</p>
+
+    <ul class="feature-list">
+      <li><span class="fi">✦</span><div><strong>Ventas y presupuestos al instante:</strong> registrá una venta o generá una cotización para un cliente en segundos, con cálculo automático de totales.</div></li>
+      <li><span class="fi">✦</span><div><strong>Control de stock con alertas automáticas:</strong> cada artículo tiene un stock que se descuenta solo con cada venta, y el sistema avisa cuando queda poco.</div></li>
+      <li><span class="fi">✦</span><div><strong>Caja con historial de movimientos:</strong> aperturas, ingresos, retiros, arqueos y cierres, todo registrado con fecha y empleado responsable.</div></li>
+      <li><span class="fi">✦</span><div><strong>Compras a proveedores y cuenta corriente:</strong> registrá lo que comprás a cada proveedor y llevá el saldo de lo que se debe.</div></li>
+      <li><span class="fi">✦</span><div><strong>Turnos y agenda del lubricentro:</strong> calendario semanal de turnos por cliente, vehículo y servicio.</div></li>
+      <li><span class="fi">✦</span><div><strong>Dashboard con gráficos y estadísticas:</strong> ventas por mes, top de artículos vendidos, deudas pendientes y saldo de caja, todo en una sola pantalla.</div></li>
+    </ul>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">💡</span>
+    <p>FiltCar es de uso <strong>exclusivo de un lubricentro</strong>: cada cliente tiene su propia instalación del sistema, con su propia base de datos, usuarios y configuración, totalmente independiente de otros lubricentros.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     2. ROLES
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 2</div>
+  <h2>Roles del sistema</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    FiltCar tiene tres roles de usuario. Los tres pueden operar el día a día del lubricentro (ventas, artículos, clientes, caja, etc.); lo que cambia entre ellos es el acceso a la sección de Administración.
+  </p>
+
+  <div class="roles-grid">
+    <div class="role-card admin">
+      <div class="role-name">⚙️ Administrador</div>
+      <p>Acceso completo al sistema, incluida la gestión de usuarios y la auditoría de actividad.</p>
+      <ul>
+        <li>Usa todos los módulos operativos del lubricentro</li>
+        <li>Crea, edita y desactiva usuarios</li>
+        <li>Es el único que ve la Auditoría del sistema</li>
+        <li>Puede cambiar su propia foto y contraseña</li>
+      </ul>
+    </div>
+    <div class="role-card coord">
+      <div class="role-name">🗂️ Empleado Admin</div>
+      <p>Opera el lubricentro igual que el Administrador, pero con acceso de <strong>solo lectura</strong> a la lista de usuarios.</p>
+      <ul>
+        <li>Usa todos los módulos operativos del lubricentro</li>
+        <li>Puede ver la lista de Usuarios, pero no crear, editar ni desactivar</li>
+        <li>No tiene acceso a la Auditoría</li>
+        <li>Puede cambiar su propia foto y contraseña</li>
+      </ul>
+    </div>
+    <div class="role-card tech">
+      <div class="role-name">🧑‍🔧 Empleado Ventas</div>
+      <p>Rol operativo enfocado en el mostrador: ventas, presupuestos, clientes y stock.</p>
+      <ul>
+        <li>Usa todos los módulos operativos del lubricentro</li>
+        <li>No ve la sección Administración (ni Usuarios ni Auditoría)</li>
+        <li>Puede cambiar su propia foto y contraseña</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info-box tip">
+    <span class="icon">🔑</span>
+    <p>Cada usuario recibe sus credenciales (usuario + contraseña) del Administrador. El Administrador es el único que puede crear nuevos usuarios.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Función</th>
+        <th>Administrador</th>
+        <th>Empleado Admin</th>
+        <th>Empleado Ventas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Artículos, Clientes, Proveedores</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>Ventas, Presupuestos, Deudas</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>Caja, Compras, Turnos, Informes</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>Ver Usuarios</td><td>✅</td><td>👁️ Solo lectura</td><td>—</td></tr>
+      <tr><td>Crear / editar / desactivar usuarios</td><td>✅</td><td>—</td><td>—</td></tr>
+      <tr><td>Ver Auditoría</td><td>✅</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     3. INICIO DE SESIÓN
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 3</div>
+  <h2>Inicio de sesión</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    La pantalla de acceso es lo primero que verás al abrir FiltCar. Solo necesitás tu usuario y contraseña para ingresar.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="0.png" alt="Pantalla de inicio de sesión de FiltCar" />
+    <div class="screenshot-caption">Figura 1 — Pantalla de inicio de sesión</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Cómo ingresar</h3>
+    <ol style="padding-left:18px; color:#374151; line-height:2">
+      <li>Abrí el navegador y entrá a la dirección del sistema de tu lubricentro.</li>
+      <li>Escribí tu <strong>usuario</strong> en el campo correspondiente.</li>
+      <li>Escribí tu <strong>contraseña</strong> (podés mostrarla con el ícono del ojo).</li>
+      <li>Hacé clic en <strong>Ingresar</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="subsection">
+    <h3>¿Qué muestra la pantalla de login?</h3>
+    <p>La parte izquierda resume las principales capacidades de la plataforma:</p>
+    <ul class="feature-list">
+      <li><span class="fi">→</span> Ventas y presupuestos al instante</li>
+      <li><span class="fi">→</span> Control de stock con alertas automáticas</li>
+      <li><span class="fi">→</span> Caja con historial de movimientos</li>
+      <li><span class="fi">→</span> Compras a proveedores y cuenta corriente</li>
+      <li><span class="fi">→</span> Turnos y agenda del lubricentro</li>
+      <li><span class="fi">→</span> Dashboard con gráficos y estadísticas</li>
+    </ul>
+  </div>
+
+  <div class="info-box warn">
+    <span class="icon">⚠️</span>
+    <p>Si olvidaste tu contraseña, contactá al Administrador para que te genere una nueva desde la sección Usuarios. No hay recuperación de contraseña por email.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     4. SIDEBAR Y PERFIL
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 4</div>
+  <h2>Barra lateral y tu perfil</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    Una vez que iniciaste sesión, verás la barra lateral izquierda con toda la navegación. Desde ahí accedés a cada módulo y también podés cambiar tu foto de perfil y tu contraseña.
+  </p>
+
+  <div class="screenshot-wrap" style="max-width:280px">
+    <img src="1.png" alt="Barra lateral con navegación y perfil de usuario" />
+    <div class="screenshot-caption">Figura 2 — Barra lateral con tu nombre, rol y navegación</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Tu perfil en la barra lateral</h3>
+    <p>Debajo de "FILT-CAR / Lubricentro" aparece tu nombre de usuario y tu rol (Admin, EmpleadoAdmin o EmpleadoVentas). Hacé clic ahí para abrir el menú de cuenta, con dos opciones: <strong>Cambiar foto de perfil</strong> y <strong>Cambiar contraseña</strong>.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Cambiar foto de perfil</h3>
+    <div class="screenshot-wrap" style="max-width:320px">
+      <img src="2.png" alt="Modal para cambiar la foto de perfil" />
+      <div class="screenshot-caption">Figura 3 — Modal de cambio de foto de perfil</div>
+    </div>
+    <p>Hacé clic en <strong>"Elegir imagen"</strong>, seleccioná una foto desde tu computadora o celular, y confirmá con <strong>"Guardar foto"</strong>. La imagen se sube y queda asociada a tu usuario, visible para todos en la barra lateral.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Cambiar contraseña</h3>
+    <div class="screenshot-wrap" style="max-width:320px">
+      <img src="3.png" alt="Modal para cambiar la contraseña" />
+      <div class="screenshot-caption">Figura 4 — Modal de cambio de contraseña</div>
+    </div>
+    <p>Ingresá tu <strong>contraseña actual</strong>, luego la <strong>nueva contraseña</strong> y repetila en <strong>"Confirmar nueva contraseña"</strong>. Hacé clic en <strong>"Cambiar"</strong> para confirmar.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Navegación principal</h3>
+    <p>Los ítems de la barra lateral te llevan a cada módulo del sistema. Algunos muestran una badge roja con un contador (por ejemplo, artículos con stock bajo o deudas pendientes). La sección <strong>Administración</strong>, al final, solo aparece si tu rol tiene acceso a Usuarios o Auditoría.</p>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">🔒</span>
+    <p>Al final de la barra lateral está el botón <strong>"Cerrar sesión"</strong>, que cierra tu sesión actual y te devuelve a la pantalla de login.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     5. DASHBOARD
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 5</div>
+  <h2>Dashboard — Panel de control</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El Dashboard es la primera pantalla que ves después de iniciar sesión. Te da un resumen en tiempo real del estado del lubricentro: artículos, clientes, ventas del día, caja y deudas.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="4.png" alt="Dashboard con KPIs y gráficos" />
+    <div class="screenshot-caption">Figura 5 — Dashboard con KPIs y gráficos en tiempo real</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Tarjetas de resumen</h3>
+    <table>
+      <thead><tr><th>Tarjeta</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Artículos</strong></td><td>Cantidad de artículos activos en el catálogo</td></tr>
+        <tr><td><strong>Clientes</strong></td><td>Cantidad de clientes activos</td></tr>
+        <tr><td><strong>Ventas hoy</strong></td><td>Total vendido en el día de hoy</td></tr>
+        <tr><td><strong>Saldo caja</strong></td><td>Saldo acumulado histórico de la caja</td></tr>
+        <tr><td><strong>Deudas pendientes</strong></td><td>Total adeudado por ventas registradas a cuenta corriente</td></tr>
+        <tr><td><strong>Presupuestos</strong></td><td>Cantidad de presupuestos vigentes (no vencidos)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>Gráficos</h3>
+    <p><strong>Ventas por mes</strong> muestra la evolución de los últimos 6 meses en un gráfico de barras. <strong>Top artículos vendidos</strong> muestra el ranking de los 5 artículos más vendidos por cantidad de unidades.</p>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">📊</span>
+    <p>Todos los números del Dashboard se actualizan al cargar la página. Si querés ver los datos más recientes, recargá la página.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     6. ARTÍCULOS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 6</div>
+  <h2>Artículos</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El catálogo de Artículos es la base del sistema: ahí se registran los aceites, filtros y demás productos que vende el lubricentro, junto con su precio y stock disponible.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="5.png" alt="Listado de artículos" />
+    <div class="screenshot-caption">Figura 6 — Listado de artículos con marca, modelo, precio y stock</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de artículos</h3>
+    <p>Cada fila muestra marca, modelo, descripción, precio, stock actual y estado (Activo/Inactivo). El buscador permite filtrar por marca o modelo. El botón <strong>"Exportar todos"</strong> descarga el catálogo completo en un archivo CSV.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear un nuevo artículo</h3>
+    <div class="screenshot-wrap" style="max-width:420px">
+      <img src="5.1.png" alt="Formulario de nuevo artículo" />
+      <div class="screenshot-caption">Figura 7 — Formulario de alta de artículo</div>
+    </div>
+    <p>Hacé clic en <strong>"+ Nuevo artículo"</strong> y completá los campos:</p>
+    <table>
+      <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Marca</strong></td><td>Marca del producto (ej: Castrol, Mahle, Bardahl)</td></tr>
+        <tr><td><strong>Modelo</strong></td><td>Modelo o variante (ej: GTX 20W-50)</td></tr>
+        <tr><td><strong>Descripción</strong></td><td>Texto descriptivo adicional (opcional)</td></tr>
+        <tr><td><strong>Precio</strong></td><td>Precio de venta actual</td></tr>
+        <tr><td><strong>Stock</strong></td><td>Cantidad inicial disponible</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>Editar y desactivar un artículo</h3>
+    <p>Desde la columna "Acciones" podés hacer clic en <strong>"Editar"</strong> para modificar los datos del artículo. Los artículos no se eliminan: se desactivan, y dejan de poder venderse mientras conservan su historial en ventas anteriores.</p>
+  </div>
+
+  <div class="info-box tip">
+    <span class="icon">📦</span>
+    <p>El stock de cada artículo se descuenta automáticamente cada vez que se registra una venta que lo incluye. Cuando el stock llega a un nivel bajo, aparece una badge roja en el menú de Artículos.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     7. CLIENTES
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 7</div>
+  <h2>Clientes</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Clientes centraliza los datos de contacto de cada cliente del lubricentro y te da acceso directo al historial de servicios y ventas de cada uno.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="6.png" alt="Listado de clientes" />
+    <div class="screenshot-caption">Figura 8 — Listado de clientes con datos de contacto</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de clientes</h3>
+    <p>Cada fila muestra nombre, teléfono, email, dirección y estado. El buscador filtra por nombre o teléfono. El botón <strong>"Historial"</strong> de cada fila abre las ventas y movimientos asociados a ese cliente.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear un nuevo cliente</h3>
+    <div class="screenshot-wrap" style="max-width:420px">
+      <img src="6.2.png" alt="Formulario de nuevo cliente" />
+      <div class="screenshot-caption">Figura 9 — Formulario de alta de cliente</div>
+    </div>
+    <p>Hacé clic en <strong>"+ Nuevo cliente"</strong> y completá nombre y apellido (obligatorios), y opcionalmente teléfono, email y dirección.</p>
+  </div>
+
+  <div class="info-box tip">
+    <span class="icon">👤</span>
+    <p>Un cliente registrado puede elegirse al crear una Venta, un Presupuesto o un Turno, para que ese movimiento quede asociado a su historial.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     8. PROVEEDORES
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 8</div>
+  <h2>Proveedores</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Proveedores registra las empresas que abastecen al lubricentro de aceites, filtros y otros productos, junto con su contacto comercial.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="7.png" alt="Listado de proveedores" />
+    <div class="screenshot-caption">Figura 10 — Listado de proveedores con datos de contacto</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de proveedores</h3>
+    <p>Cada fila muestra la empresa, persona de contacto, teléfono, email y estado. Igual que en Clientes, podés buscar por nombre o contacto y exportar el listado completo.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear y editar proveedores</h3>
+    <p>Hacé clic en <strong>"+ Nuevo proveedor"</strong> para dar de alta una empresa proveedora, o en <strong>"Editar"</strong> para actualizar sus datos. Un proveedor se elige al registrar una Compra, para llevar el historial y la cuenta corriente con cada uno.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     9. VENTAS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 9</div>
+  <h2>Ventas</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Ventas es el corazón operativo del mostrador: cada venta que se registra descuenta el stock de los artículos vendidos y queda en el historial con su forma de pago.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="8.png" alt="Listado de ventas" />
+    <div class="screenshot-caption">Figura 11 — Historial de ventas con filtros por fecha y cliente</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de ventas</h3>
+    <p>Cada fila muestra fecha, cliente (o "Mostrador" si no se asoció a un cliente registrado), cantidad de ítems, total, forma de pago y estado. Las ventas <strong>a cuenta corriente (Deuda)</strong> sin saldar muestran cuánto debe el cliente. Podés filtrar por rango de fechas o buscar por cliente.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Registrar una nueva venta</h3>
+    <div class="screenshot-wrap">
+      <img src="8.1.png" alt="Formulario de nueva venta" />
+      <div class="screenshot-caption">Figura 12 — Formulario de nueva venta</div>
+    </div>
+    <ol style="padding-left:18px; color:#374151; line-height:2">
+      <li>Hacé clic en <strong>"+ Nueva venta"</strong>.</li>
+      <li>Elegí un <strong>cliente</strong> registrado, o dejá "Mostrador (sin cliente)" para una venta sin asociar.</li>
+      <li>Agregá uno o más <strong>artículos</strong> desde el buscador "Agregar artículo...".</li>
+      <li>Revisá el <strong>resumen</strong>: subtotal, descuento (opcional) y total.</li>
+      <li>Elegí la <strong>forma de pago</strong>: Contado, Tarjeta, Depósito o Deuda.</li>
+      <li>Confirmá la venta. El stock de los artículos vendidos se descuenta automáticamente.</li>
+    </ol>
+  </div>
+
+  <div class="info-box warn">
+    <span class="icon">⚠️</span>
+    <p>Si elegís <strong>"Deuda"</strong> como forma de pago, la venta queda registrada en el módulo de Deudas a nombre del cliente seleccionado, pendiente de cobro.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     10. PRESUPUESTOS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 10</div>
+  <h2>Presupuestos</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    Los presupuestos son cotizaciones para clientes que todavía no se concretaron en una venta. Tienen una fecha de vencimiento y se pueden convertir en venta cuando el cliente acepta.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="9.png" alt="Listado de presupuestos" />
+    <div class="screenshot-caption">Figura 13 — Listado de presupuestos con estado de vigencia</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de presupuestos</h3>
+    <p>Cada fila muestra fecha de emisión, cliente, fecha de vencimiento, total y estado (<strong>Vigente</strong> o <strong>Vencido</strong>, según la fecha de vencimiento haya pasado o no).</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear un nuevo presupuesto</h3>
+    <div class="screenshot-wrap">
+      <img src="9.1.png" alt="Formulario de nuevo presupuesto" />
+      <div class="screenshot-caption">Figura 14 — Formulario de nuevo presupuesto</div>
+    </div>
+    <p>Hacé clic en <strong>"+ Nuevo presupuesto"</strong>, elegí un cliente (opcional), una fecha de vencimiento, agregá observaciones si hace falta, y sumá los artículos a cotizar. El total se calcula automáticamente.</p>
+  </div>
+
+  <div class="info-box tip">
+    <span class="icon">📋</span>
+    <p>El botón <strong>"Exportar todos"</strong> descarga el listado completo de presupuestos en CSV, útil para hacer seguimiento comercial.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     11. DEUDAS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 11</div>
+  <h2>Deudas de clientes</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    Esta pantalla reúne todas las ventas registradas con forma de pago "Deuda" que todavía tienen saldo pendiente de cobro.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="10.png" alt="Listado de deudas pendientes" />
+    <div class="screenshot-caption">Figura 15 — Deudas de clientes con saldo pendiente</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Información de cada deuda</h3>
+    <table>
+      <thead><tr><th>Columna</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cliente</strong></td><td>Nombre y teléfono del cliente deudor</td></tr>
+        <tr><td><strong>Fecha venta</strong></td><td>Cuándo se originó la deuda</td></tr>
+        <tr><td><strong>Original</strong></td><td>Monto total de la venta a crédito</td></tr>
+        <tr><td><strong>Pagado</strong></td><td>Lo que el cliente ya abonó a cuenta</td></tr>
+        <tr><td><strong>Saldo</strong></td><td>Lo que todavía debe</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>Cobrar una deuda</h3>
+    <p>Hacé clic en <strong>"Cobrar"</strong> en la fila del cliente para registrar un pago parcial o total. El saldo se actualiza automáticamente y, si llega a $0, la deuda desaparece de esta lista.</p>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">💳</span>
+    <p>El total acumulado de "Total pendiente" en la parte superior muestra cuánto dinero le deben en conjunto todos los clientes con saldo abierto.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     12. CAJA
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 12</div>
+  <h2>Caja</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Caja lleva el registro de todo el movimiento de dinero del lubricentro: aperturas, ingresos, retiros, arqueos y cierres de caja.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="11.png" alt="Caja con historial de movimientos y modal de nuevo movimiento" />
+    <div class="screenshot-caption">Figura 16 — Historial de caja y formulario de nuevo movimiento</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Saldo actual</h3>
+    <p>En la parte superior se muestra el <strong>saldo actual</strong> de la caja, calculado en base a todos los movimientos registrados hasta el momento. El historial debajo lista cada movimiento con fecha, monto y empleado que lo registró.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Registrar un nuevo movimiento</h3>
+    <p>Hacé clic en <strong>"+ Nuevo movimiento"</strong> y elegí el tipo:</p>
+    <table>
+      <thead><tr><th>Tipo</th><th>Cuándo usarlo</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Apertura</strong></td><td>Al iniciar el día, con el efectivo inicial en caja</td></tr>
+        <tr><td><strong>Ingreso</strong></td><td>Entrada de dinero fuera de una venta (ej: cobro de una deuda)</td></tr>
+        <tr><td><strong>Retiro</strong></td><td>Salida de dinero de la caja (ej: pago a un proveedor en efectivo)</td></tr>
+        <tr><td><strong>Arqueo</strong></td><td>Verificación del efectivo físico contra el saldo del sistema</td></tr>
+        <tr><td><strong>Cierre</strong></td><td>Al finalizar el día, con el efectivo final en caja</td></tr>
+      </tbody>
+    </table>
+    <p>Completá el <strong>monto</strong> y, opcionalmente, una observación, y confirmá con <strong>"Registrar"</strong>.</p>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">🏦</span>
+    <p>Las ventas con forma de pago "Contado" generan automáticamente un ingreso en caja; no es necesario registrarlas manualmente.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     13. COMPRAS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 13</div>
+  <h2>Compras</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Compras registra la reposición de stock: cada compra a un proveedor suma artículos al inventario y, si no se paga en el momento, queda como saldo pendiente con ese proveedor.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="12.png" alt="Listado de compras" />
+    <div class="screenshot-caption">Figura 17 — Historial de compras con estado de pago</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de compras</h3>
+    <p>Cada fila muestra fecha, proveedor, cantidad de ítems, total y estado: <strong>Pagado</strong> o <strong>"Debe $X"</strong> si quedó saldo pendiente con el proveedor. Podés filtrar por rango de fechas.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Registrar una nueva compra</h3>
+    <div class="screenshot-wrap">
+      <img src="12.1.png" alt="Formulario de nueva compra" />
+      <div class="screenshot-caption">Figura 18 — Formulario de nueva compra</div>
+    </div>
+    <ol style="padding-left:18px; color:#374151; line-height:2">
+      <li>Hacé clic en <strong>"+ Nueva compra"</strong>.</li>
+      <li>Elegí el <strong>proveedor</strong>.</li>
+      <li>Activá <strong>"Pago inmediato"</strong> si se paga en el momento, o dejalo apagado para que quede a cuenta.</li>
+      <li>Agregá los <strong>artículos comprados</strong> y sus cantidades.</li>
+      <li>Confirmá con <strong>"Confirmar compra"</strong>. El stock de esos artículos se suma automáticamente.</li>
+    </ol>
+  </div>
+
+  <div class="info-box tip">
+    <span class="icon">🛒</span>
+    <p>Las compras son el camino natural para reponer stock: cada artículo comprado suma directamente a la cantidad disponible en Artículos.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     14. TURNOS
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 14</div>
+  <h2>Turnos</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    El módulo de Turnos es la agenda del lubricentro: permite programar citas de clientes con fecha, hora, vehículo y servicio a realizar.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="13.png" alt="Agenda semanal de turnos" />
+    <div class="screenshot-caption">Figura 19 — Agenda semanal de turnos por día</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Vista semanal</h3>
+    <p>Los turnos se organizan por día, dentro de una semana navegable con las flechas <strong>◄ ►</strong> y el botón <strong>"Hoy"</strong> para volver a la fecha actual. Las pestañas <strong>Todos / Pendiente / Confirmado / Completado / Cancelado</strong> filtran los turnos por estado.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear un nuevo turno</h3>
+    <div class="screenshot-wrap">
+      <img src="13.1.png" alt="Formulario de nuevo turno" />
+      <div class="screenshot-caption">Figura 20 — Formulario de alta de turno</div>
+    </div>
+    <p>Hacé clic en <strong>"+ Turno"</strong> (general o de un día puntual) y completá:</p>
+    <table>
+      <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Fecha y hora</strong></td><td>Cuándo se realizará el turno</td></tr>
+        <tr><td><strong>Cliente</strong></td><td>Elegí uno registrado o escribí nombre y teléfono manualmente</td></tr>
+        <tr><td><strong>Vehículo / Patente</strong></td><td>Datos del vehículo que se va a atender</td></tr>
+        <tr><td><strong>Servicio</strong></td><td>Tipo de trabajo (hay chips rápidos: cambio de aceite, filtro de aceite, de aire, etc.)</td></tr>
+        <tr><td><strong>Empleado asignado</strong></td><td>Quién va a atender el turno (opcional)</td></tr>
+        <tr><td><strong>Observaciones</strong></td><td>Notas adicionales (opcional)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>Cambiar el estado de un turno</h3>
+    <p>A medida que avanza el día, marcá cada turno como <strong>Confirmado</strong>, <strong>Completado</strong> o <strong>Cancelado</strong> según corresponda, para mantener la agenda al día.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     15. INFORMES
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 15</div>
+  <h2>Informes</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    La sección Informes analiza la actividad comercial del lubricentro: ventas, compras, ticket promedio y resultado, con la posibilidad de elegir distintos períodos.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="14.png" alt="Informes con KPIs por período" />
+    <div class="screenshot-caption">Figura 21 — Informes con KPIs, ventas por día y stock bajo</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Períodos disponibles</h3>
+    <p>Elegí entre <strong>Hoy</strong>, <strong>Últimos 7 días</strong>, <strong>Este mes</strong>, <strong>Mes anterior</strong> o un rango <strong>Personalizado</strong>. Todos los KPIs y gráficos de la pantalla se recalculan según el período elegido. El botón <strong>"Actualizar"</strong> vuelve a consultar los datos más recientes.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Indicadores principales</h3>
+    <table>
+      <thead><tr><th>Indicador</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Total ventas</strong></td><td>Suma de todas las ventas del período</td></tr>
+        <tr><td><strong>Ticket promedio</strong></td><td>Monto promedio por venta</td></tr>
+        <tr><td><strong>Total compras</strong></td><td>Suma de todas las compras del período</td></tr>
+        <tr><td><strong>Resultado</strong></td><td>Ventas menos compras del período (ganancia bruta)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>Detalle adicional</h3>
+    <p><strong>Ventas por forma de pago</strong> y <strong>Top artículos vendidos</strong> desglosan el período, mientras que <strong>Ventas por día</strong> muestra la evolución diaria. La sección <strong>Stock bajo</strong> lista los artículos por debajo del umbral mínimo configurado, para anticipar reposiciones.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     16. USUARIOS (ADMIN)
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 16 — Administración</div>
+  <h2>Usuarios</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    La sección Usuarios gestiona quién puede ingresar al sistema y con qué rol. El Administrador tiene acceso completo; el Empleado Admin puede consultarla en modo de solo lectura.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="15.png" alt="Gestión de usuarios" />
+    <div class="screenshot-caption">Figura 22 — Listado de usuarios con rol y estado</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Lista de usuarios</h3>
+    <p>Cada fila muestra nombre, usuario, rol (con una badge de color) y estado (Activo/Inactivo). El buscador filtra por nombre o usuario.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Crear un nuevo usuario (solo Admin)</h3>
+    <p>Hacé clic en <strong>"+ Nuevo usuario"</strong> y completá nombre, apellido, usuario, contraseña inicial y rol (Administrador, Empleado Admin o Empleado Ventas).</p>
+  </div>
+
+  <div class="subsection">
+    <h3>Editar y desactivar usuarios (solo Admin)</h3>
+    <p>Desde <strong>"Editar"</strong> podés cambiar el nombre, el rol o restablecer la contraseña de un usuario. Para dar de baja a alguien, desactivá su usuario en lugar de eliminarlo: así conserva su historial de acciones en la Auditoría.</p>
+  </div>
+
+  <div class="info-box warn">
+    <span class="icon">⚠️</span>
+    <p>Si tu rol es <strong>Empleado Admin</strong>, vas a ver esta lista pero los botones de crear, editar y desactivar no estarán disponibles: el acceso es de solo lectura.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     17. AUDITORÍA (ADMIN)
+═══════════════════════════════════════════════ -->
+<div class="section-page page-break">
+  <div class="section-chapter">Capítulo 17 — Administración</div>
+  <h2>Auditoría</h2>
+  <div class="section-divider"></div>
+  <p class="section-lead">
+    La Auditoría registra automáticamente cada acción importante que se realiza en el sistema: quién la hizo, qué hizo y cuándo. Es visible únicamente para el rol Administrador.
+  </p>
+
+  <div class="screenshot-wrap">
+    <img src="16.png" alt="Pantalla de auditoría del sistema" />
+    <div class="screenshot-caption">Figura 23 — Registro de actividad del sistema con filtro por fechas</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Qué queda registrado</h3>
+    <p>Cada fila muestra fecha y hora, usuario que realizó la acción, una etiqueta de color con el tipo de acción, y una descripción legible de lo sucedido. Entre las acciones registradas:</p>
+    <ul class="feature-list">
+      <li><span class="fi">→</span>Inicios de sesión, cambios de contraseña y de foto de perfil</li>
+      <li><span class="fi">→</span>Alta, edición y desactivación de artículos, clientes, proveedores y usuarios</li>
+      <li><span class="fi">→</span>Registro de ventas, compras, movimientos de caja y pagos de deudas</li>
+      <li><span class="fi">→</span>Creación de presupuestos</li>
+      <li><span class="fi">→</span>Alta, edición, cambio de estado y eliminación de turnos</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <h3>Filtrar por fecha</h3>
+    <p>Usá los campos <strong>"Desde"</strong> y <strong>"Hasta"</strong> para acotar la búsqueda a un rango de fechas puntual. La lista se pagina automáticamente cuando hay muchos registros.</p>
+  </div>
+
+  <div class="info-box note">
+    <span class="icon">📜</span>
+    <p>La Auditoría es de solo lectura: sirve para entender qué pasó y quién lo hizo, pero no permite revertir ni modificar acciones ya realizadas.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════ -->
+<div class="doc-footer">
+  <p><strong>FILT-CAR</strong> — Sistema de Gestión para Lubricentros</p>
+  <p style="margin-top:6px">Desarrollado por <strong>Skylia</strong> · © 2026 · Todos los derechos reservados</p>
+  <p style="margin-top:6px; color:#d1d5db; font-size:11px">Para soporte técnico contactar al administrador del sistema.</p>
+</div>
+
+</div><!-- /container -->
+</body>
+</html>
