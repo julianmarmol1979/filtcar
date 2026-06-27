@@ -3,15 +3,24 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Droplets, ShieldCheck, Lock } from "lucide-react";
+import { Menu, X, Droplets, ShieldCheck, Lock, Wrench, Boxes } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { AccountMenu } from "@/components/AccountMenu";
 
-const navItems = [
-  { href: "/dashboard",    label: "Dashboard",    icon: "⊞" },
-  { href: "/clientes",     label: "Clientes",     icon: "👤" },
-  { href: "/ordenes",      label: "Órdenes",      icon: "🔧" },
+const topNavItems = [
+  { href: "/dashboard", label: "Dashboard", icon: "⊞" },
+] as const;
+
+// Atención al cliente: lo que vive el cliente y su vehículo en el día a día del taller.
+const tallerNavItems = [
+  { href: "/clientes", label: "Clientes", icon: "👤" },
+  { href: "/ordenes",  label: "Órdenes",  icon: "🔧" },
+  { href: "/turnos",   label: "Turnos",   icon: "📅" },
+] as const;
+
+// Gestión comercial: stock, plata, proveedores — todo lo administrativo del negocio.
+const stockNavItems = [
   { href: "/articulos",    label: "Artículos",    icon: "📦", badge: "stockBajo" },
   { href: "/proveedores",  label: "Proveedores",  icon: "🏭" },
   { href: "/ventas",       label: "Ventas",       icon: "💰" },
@@ -19,7 +28,6 @@ const navItems = [
   { href: "/deudas",       label: "Deudas",       icon: "💳", badge: "deudas" },
   { href: "/caja",         label: "Caja",         icon: "🏦" },
   { href: "/compras",      label: "Compras",      icon: "🛒" },
-  { href: "/turnos",       label: "Turnos",       icon: "📅" },
   { href: "/informes",     label: "Informes",     icon: "📊" },
 ] as const;
 
@@ -106,7 +114,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3">
-        {navItems.map((item) => {
+        {topNavItems.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
+                active
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              <span className="text-base w-5 text-center">{item.icon}</span>
+              <span className="flex-1">{item.label}</span>
+            </Link>
+          );
+        })}
+
+        <div className="flex items-center gap-2 px-5 pt-4 pb-1.5">
+          <Wrench className="w-3 h-3 text-gray-500" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Taller</span>
+        </div>
+        {tallerNavItems.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
+                active
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              <span className="text-base w-5 text-center">{item.icon}</span>
+              <span className="flex-1">{item.label}</span>
+            </Link>
+          );
+        })}
+
+        <div className="flex items-center gap-2 px-5 pt-4 pb-1.5">
+          <Boxes className="w-3 h-3 text-gray-500" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Ventas y stock</span>
+        </div>
+        {stockNavItems.map((item) => {
           const active     = pathname === item.href || pathname.startsWith(item.href + "/");
           const badgeKey   = "badge" in item ? item.badge : undefined;
           const badgeCount = badgeKey ? badges[badgeKey] : 0;
