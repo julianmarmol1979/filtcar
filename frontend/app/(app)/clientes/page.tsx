@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Search, X, Users, Download, History, ShoppingCart, FileText } from "lucide-react";
+import { Plus, Pencil, Search, X, Users, Download, History, ShoppingCart, FileText, Car, Wrench } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { exportToExcel } from "@/lib/exportExcel";
 
@@ -34,9 +34,21 @@ interface PresupuestoHistorial {
   vencido: boolean;
 }
 
-type HistorialTab = "ventas" | "presupuestos";
+interface AutoCliente {
+  id: number;
+  patente: string;
+  marca?: string | null;
+  modelo?: string | null;
+  anio?: string | null;
+  color?: string | null;
+  kilometraje?: number | null;
+  activo: boolean;
+}
+
+type HistorialTab = "ventas" | "presupuestos" | "autos";
 
 const emptyForm = { nombre: "", apellido: "", telefono: "", email: "", direccion: "" };
+const emptyAutoForm = { patente: "", marca: "", modelo: "", anio: "", color: "" };
 
 function fmt(n: number) {
   return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
@@ -73,6 +85,14 @@ export default function ClientesPage() {
   const [historialVentas, setHistorialVentas]     = useState<VentaHistorial[]>([]);
   const [historialPresu, setHistorialPresu]       = useState<PresupuestoHistorial[]>([]);
   const [loadingHistorial, setLoadingHistorial]   = useState(false);
+
+  // Autos del cliente
+  const [autos, setAutos]               = useState<AutoCliente[]>([]);
+  const [loadingAutos, setLoadingAutos]  = useState(false);
+  const [autoModalOpen, setAutoModalOpen] = useState(false);
+  const [autoForm, setAutoForm]           = useState(emptyAutoForm);
+  const [savingAuto, setSavingAuto]       = useState(false);
+  const [autoError, setAutoError]         = useState("");
 
   const fetchClientes = useCallback(async (q = "") => {
     setLoading(true);
@@ -154,6 +174,49 @@ export default function ClientesPage() {
       setHistorialVentas(data.ventas ?? []);
       setHistorialPresu(data.presupuestos ?? []);
     } finally { setLoadingHistorial(false); }
+    fetchAutos(c.id);
+  }
+
+  async function fetchAutos(clienteId: number) {
+    setLoadingAutos(true);
+    try {
+      const res  = await fetch(`/api/autos?clienteId=${clienteId}`);
+      const data = await res.json();
+      setAutos(Array.isArray(data) ? data : []);
+    } finally { setLoadingAutos(false); }
+  }
+
+  function openAutoCreate() { setAutoForm(emptyAutoForm); setAutoError(""); setAutoModalOpen(true); }
+  function closeAutoModal() { setAutoModalOpen(false); setAutoError(""); }
+
+  async function handleSaveAuto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!historialCliente) return;
+    if (!autoForm.patente.trim()) { setAutoError("La patente es obligatoria"); return; }
+    setSavingAuto(true);
+    setAutoError("");
+    try {
+      const res = await fetch("/api/autos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clienteId: historialCliente.id,
+          patente: autoForm.patente,
+          marca: autoForm.marca || null,
+          modelo: autoForm.modelo || null,
+          anio: autoForm.anio || null,
+          color: autoForm.color || null,
+        }),
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); setAutoError(err.message ?? "Error al guardar"); return; }
+      closeAutoModal();
+      fetchAutos(historialCliente.id);
+    } finally { setSavingAuto(false); }
+  }
+
+  async function handleToggleAuto(a: AutoCliente) {
+    await fetch(`/api/autos/${a.id}/toggle`, { method: "PATCH" });
+    setAutos((prev) => prev.map((x) => (x.id === a.id ? { ...x, activo: !x.activo } : x)));
   }
 
   return (
@@ -349,11 +412,70 @@ export default function ClientesPage() {
                 <FileText className="w-4 h-4" />
                 Presupuestos {!loadingHistorial && `(${historialPresu.length})`}
               </button>
+              <button
+                onClick={() => setHistorialTab("autos")}
+                className={`flex items-center gap-1.5 py-3 px-1 ml-6 text-sm font-semibold border-b-2 transition-colors ${
+                  historialTab === "autos"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Car className="w-4 h-4" />
+                Autos {!loadingAutos && `(${autos.length})`}
+              </button>
             </div>
 
             {/* Content */}
             <div className="overflow-y-auto flex-1 px-6 py-4">
-              {loadingHistorial ? (
+              {historialTab === "autos" ? (
+                <>
+                  <div className="flex justify-end mb-3">
+                    <button onClick={openAutoCreate} className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800">
+                      <Plus className="w-3.5 h-3.5" /> Nuevo vehículo
+                    </button>
+                  </div>
+                  {loadingAutos ? (
+                    <p className="text-center text-gray-400 text-sm py-8">Cargando...</p>
+                  ) : autos.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 text-gray-400 py-10">
+                      <Car className="w-8 h-8" />
+                      <p className="text-sm">Sin vehículos registrados</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-500 border-b border-gray-100">
+                          <th className="text-left pb-2 font-semibold">Patente</th>
+                          <th className="text-left pb-2 font-semibold">Marca / Modelo</th>
+                          <th className="text-left pb-2 font-semibold">Año</th>
+                          <th className="text-center pb-2 font-semibold">Estado</th>
+                          <th className="text-center pb-2 font-semibold">Órdenes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {autos.map((a) => (
+                          <tr key={a.id} className="hover:bg-gray-50">
+                            <td className="py-2.5 font-semibold text-gray-900">{a.patente}</td>
+                            <td className="py-2.5 text-gray-600">{[a.marca, a.modelo].filter(Boolean).join(" ") || <span className="text-gray-400">—</span>}</td>
+                            <td className="py-2.5 text-gray-500">{a.anio || <span className="text-gray-400">—</span>}</td>
+                            <td className="py-2.5 text-center">
+                              <button onClick={() => handleToggleAuto(a)}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${a.activo ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                                {a.activo ? "Activo" : "Inactivo"}
+                              </button>
+                            </td>
+                            <td className="py-2.5 text-center">
+                              <a href={`/ordenes?search=${encodeURIComponent(a.patente)}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                                <Wrench className="w-3.5 h-3.5" /> Ver
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              ) : loadingHistorial ? (
                 <p className="text-center text-gray-400 text-sm py-8">Cargando...</p>
               ) : historialTab === "ventas" ? (
                 historialVentas.length === 0 ? (
@@ -429,6 +551,57 @@ export default function ClientesPage() {
                 )
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── New vehicle modal ────────────────────────────────────────────────── */}
+      {autoModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeAutoModal} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Nuevo vehículo</h2>
+              <button onClick={closeAutoModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleSaveAuto} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Patente <span className="text-red-500">*</span></label>
+                <input type="text" required value={autoForm.patente} onChange={(e) => setAutoForm({ ...autoForm, patente: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="AB123CD" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Marca</label>
+                  <input type="text" value={autoForm.marca} onChange={(e) => setAutoForm({ ...autoForm, marca: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ford" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Modelo</label>
+                  <input type="text" value={autoForm.modelo} onChange={(e) => setAutoForm({ ...autoForm, modelo: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Fiesta" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Año</label>
+                  <input type="text" value={autoForm.anio} onChange={(e) => setAutoForm({ ...autoForm, anio: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="2018" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Color</label>
+                  <input type="text" value={autoForm.color} onChange={(e) => setAutoForm({ ...autoForm, color: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Gris" />
+                </div>
+              </div>
+              {autoError && <p className="text-sm text-red-600 font-medium">{autoError}</p>}
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={closeAutoModal} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button type="submit" disabled={savingAuto} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
+                  {savingAuto ? "Guardando..." : "Agregar vehículo"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

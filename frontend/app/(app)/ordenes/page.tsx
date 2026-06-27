@@ -1,0 +1,467 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { Plus, X, Wrench, Search, Trash2, CheckSquare } from "lucide-react";
+
+interface Cliente {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+interface AutoOption {
+  id: number;
+  patente: string;
+  marca?: string | null;
+  modelo?: string | null;
+}
+
+interface Empleado {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+interface Orden {
+  id: number;
+  clienteId: number;
+  cliente: { nombre: string; apellido: string; telefono: string | null };
+  autoId: number;
+  auto: { patente: string; marca: string | null; modelo: string | null };
+  empleadoId: number | null;
+  empleado: { nombre: string; apellido: string } | null;
+  fecha: string;
+  estado: string;
+  motivo: string;
+  kilometrajeIngreso: number | null;
+  observaciones: string | null;
+}
+
+interface ChecklistItem {
+  id: number;
+  descripcion: string;
+  respuesta: boolean | null;
+}
+
+interface OrdenDetail extends Orden {
+  checklist: ChecklistItem[];
+}
+
+const ESTADOS = ["Pendiente", "EnProceso", "Completada", "Cancelada"] as const;
+
+const ESTADO_LABEL: Record<string, string> = {
+  Pendiente: "Pendiente",
+  EnProceso: "En proceso",
+  Completada: "Completada",
+  Cancelada: "Cancelada",
+};
+
+const ESTADO_COLOR: Record<string, string> = {
+  Pendiente: "bg-amber-100 text-amber-700",
+  EnProceso: "bg-blue-100 text-blue-700",
+  Completada: "bg-green-100 text-green-700",
+  Cancelada: "bg-gray-200 text-gray-600",
+};
+
+const emptyForm = {
+  clienteId: "" as number | "",
+  autoId: "" as number | "",
+  empleadoId: "" as number | "",
+  motivo: "",
+  kilometrajeIngreso: "",
+  observaciones: "",
+};
+
+function fmtFecha(iso: string) {
+  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+export default function OrdenesPage() {
+  const [ordenes, setOrdenes]     = useState<Orden[]>([]);
+  const [clientes, setClientes]   = useState<Cliente[]>([]);
+  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("search") ?? "" : ""
+  );
+  const [filtroEstado, setFiltroEstado] = useState("");
+
+  // Create modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm]           = useState(emptyForm);
+  const [autosCliente, setAutosCliente] = useState<AutoOption[]>([]);
+  const [nuevoAuto, setNuevoAuto] = useState(false);
+  const [nuevoAutoForm, setNuevoAutoForm] = useState({ patente: "", marca: "", modelo: "" });
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  // Detail / checklist modal
+  const [detalle, setDetalle]     = useState<OrdenDetail | null>(null);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
+
+  const fetchOrdenes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams();
+      if (search) qs.set("search", search);
+      if (filtroEstado) qs.set("estado", filtroEstado);
+      const res  = await fetch(`/api/ordenes?${qs}`);
+      const data = await res.json();
+      setOrdenes(Array.isArray(data) ? data : []);
+    } finally { setLoading(false); }
+  }, [search, filtroEstado]);
+
+  useEffect(() => { fetchOrdenes(); }, [fetchOrdenes]);
+  useEffect(() => { const t = setTimeout(fetchOrdenes, 300); return () => clearTimeout(t); }, [search, fetchOrdenes]);
+
+  useEffect(() => {
+    fetch("/api/clientes").then((r) => r.json()).then((d) => setClientes(Array.isArray(d) ? d : []));
+    fetch("/api/empleados").then((r) => r.json()).then((d) => setEmpleados(Array.isArray(d) ? d : []));
+  }, []);
+
+  useEffect(() => {
+    if (!form.clienteId) { setAutosCliente([]); return; }
+    fetch(`/api/autos?clienteId=${form.clienteId}`)
+      .then((r) => r.json())
+      .then((d) => setAutosCliente(Array.isArray(d) ? d.filter((a: { activo: boolean }) => a.activo) : []));
+  }, [form.clienteId]);
+
+  function openCreate() {
+    setForm(emptyForm);
+    setNuevoAuto(false);
+    setNuevoAutoForm({ patente: "", marca: "", modelo: "" });
+    setError("");
+    setModalOpen(true);
+  }
+  function closeModal() { setModalOpen(false); setError(""); }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!form.clienteId) { setError("Seleccioná un cliente"); return; }
+    if (!nuevoAuto && !form.autoId) { setError("Seleccioná un vehículo o agregá uno nuevo"); return; }
+    if (nuevoAuto && !nuevoAutoForm.patente.trim()) { setError("Ingresá la patente del vehículo nuevo"); return; }
+    if (!form.motivo.trim()) { setError("Describí el motivo del ingreso"); return; }
+
+    setSaving(true);
+    try {
+      let autoId = form.autoId;
+      if (nuevoAuto) {
+        const res = await fetch("/api/autos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clienteId: form.clienteId,
+            patente: nuevoAutoForm.patente,
+            marca: nuevoAutoForm.marca || null,
+            modelo: nuevoAutoForm.modelo || null,
+          }),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); setError(err.message ?? "Error al crear el vehículo"); return; }
+        const created = await res.json();
+        autoId = created.id;
+      }
+
+      const res = await fetch("/api/ordenes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clienteId: form.clienteId,
+          autoId,
+          empleadoId: form.empleadoId || null,
+          motivo: form.motivo,
+          kilometrajeIngreso: form.kilometrajeIngreso ? parseInt(form.kilometrajeIngreso) : null,
+          observaciones: form.observaciones || null,
+        }),
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); setError(err.message ?? "Error al crear la orden"); return; }
+      closeModal();
+      fetchOrdenes();
+    } finally { setSaving(false); }
+  }
+
+  async function handleEstadoChange(o: Orden, estado: string) {
+    await fetch(`/api/ordenes/${o.id}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado }),
+    });
+    setOrdenes((prev) => prev.map((x) => (x.id === o.id ? { ...x, estado } : x)));
+  }
+
+  async function handleDelete(o: Orden) {
+    if (!confirm(`¿Eliminar la orden de "${o.auto.patente}"?`)) return;
+    await fetch(`/api/ordenes/${o.id}`, { method: "DELETE" });
+    fetchOrdenes();
+  }
+
+  async function openDetalle(o: Orden) {
+    setLoadingDetalle(true);
+    setDetalle(null);
+    try {
+      const res  = await fetch(`/api/ordenes/${o.id}`);
+      const data = await res.json();
+      setDetalle(data);
+    } finally { setLoadingDetalle(false); }
+  }
+
+  function setRespuesta(itemId: number, respuesta: boolean) {
+    setDetalle((prev) => prev && {
+      ...prev,
+      checklist: prev.checklist.map((ci) => (ci.id === itemId ? { ...ci, respuesta: ci.respuesta === respuesta ? null : respuesta } : ci)),
+    });
+  }
+
+  async function handleSaveChecklist() {
+    if (!detalle) return;
+    setSavingChecklist(true);
+    try {
+      await fetch(`/api/ordenes/${detalle.id}/checklist`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: detalle.checklist.map((ci) => ({ id: ci.id, respuesta: ci.respuesta })) }),
+      });
+      setDetalle(null);
+    } finally { setSavingChecklist(false); }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Órdenes de trabajo</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Ingresos de vehículos al taller, con checklist de revisión</p>
+        </div>
+        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Nueva orden</span>
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="Buscar por patente, cliente, motivo..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Todos los estados</option>
+          {ESTADOS.map((e) => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="py-16 text-center text-gray-400 text-sm">Cargando...</div>
+        ) : ordenes.length === 0 ? (
+          <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
+            <Wrench className="w-10 h-10" />
+            <p className="text-sm font-medium">Todavía no hay órdenes de trabajo</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[760px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Cliente</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Vehículo</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Motivo</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Responsable</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Estado</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {ordenes.map((o) => (
+                  <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-gray-500">{fmtFecha(o.fecha)}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{o.cliente.apellido}, {o.cliente.nombre}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {o.auto.patente}
+                      {(o.auto.marca || o.auto.modelo) && (
+                        <span className="text-gray-400"> · {[o.auto.marca, o.auto.modelo].filter(Boolean).join(" ")}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell max-w-xs truncate">{o.motivo}</td>
+                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
+                      {o.empleado ? `${o.empleado.apellido}, ${o.empleado.nombre}` : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <select
+                        value={o.estado}
+                        onChange={(e) => handleEstadoChange(o, e.target.value)}
+                        className={`text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer ${ESTADO_COLOR[o.estado] ?? "bg-gray-100 text-gray-600"}`}
+                      >
+                        {ESTADOS.map((e) => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <button onClick={() => openDetalle(o)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                          <CheckSquare className="w-3.5 h-3.5" /> Checklist
+                        </button>
+                        <button onClick={() => handleDelete(o)} className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Create modal ─────────────────────────────────────────────────────── */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Nueva orden de trabajo</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Cliente <span className="text-red-500">*</span></label>
+                <select required value={form.clienteId}
+                  onChange={(e) => setForm({ ...form, clienteId: e.target.value ? parseInt(e.target.value) : "", autoId: "" })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Seleccioná un cliente...</option>
+                  {clientes.map((c) => <option key={c.id} value={c.id}>{c.apellido}, {c.nombre}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-semibold text-gray-700">Vehículo <span className="text-red-500">*</span></label>
+                  {form.clienteId && (
+                    <button type="button" onClick={() => setNuevoAuto(!nuevoAuto)} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                      {nuevoAuto ? "Elegir existente" : "+ Vehículo nuevo"}
+                    </button>
+                  )}
+                </div>
+                {!nuevoAuto ? (
+                  <select required={!nuevoAuto} value={form.autoId} disabled={!form.clienteId}
+                    onChange={(e) => setForm({ ...form, autoId: e.target.value ? parseInt(e.target.value) : "" })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50">
+                    <option value="">{form.clienteId ? "Seleccioná un vehículo..." : "Primero elegí un cliente"}</option>
+                    {autosCliente.map((a) => (
+                      <option key={a.id} value={a.id}>{a.patente}{(a.marca || a.modelo) ? ` · ${[a.marca, a.modelo].filter(Boolean).join(" ")}` : ""}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="text" placeholder="Patente *" value={nuevoAutoForm.patente}
+                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, patente: e.target.value })}
+                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input type="text" placeholder="Marca" value={nuevoAutoForm.marca}
+                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, marca: e.target.value })}
+                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input type="text" placeholder="Modelo" value={nuevoAutoForm.modelo}
+                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, modelo: e.target.value })}
+                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Motivo de ingreso <span className="text-red-500">*</span></label>
+                <textarea required rows={2} value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+                  placeholder="Ej: Ruido en suspensión delantera, revisión general antes de viaje, cambio de pastillas de freno..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Kilometraje</label>
+                  <input type="number" min={0} value={form.kilometrajeIngreso}
+                    onChange={(e) => setForm({ ...form, kilometrajeIngreso: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Responsable</label>
+                  <select value={form.empleadoId} onChange={(e) => setForm({ ...form, empleadoId: e.target.value ? parseInt(e.target.value) : "" })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <option value="">Sin asignar</option>
+                    {empleados.map((e) => <option key={e.id} value={e.id}>{e.apellido}, {e.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Observaciones</label>
+                <textarea rows={2} value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+
+              {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
+                  {saving ? "Guardando..." : "Crear orden"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Detail / checklist modal ─────────────────────────────────────────── */}
+      {(detalle || loadingDetalle) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDetalle(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {detalle ? `${detalle.auto.patente} — ${detalle.cliente.apellido}, ${detalle.cliente.nombre}` : "Cargando..."}
+                </h2>
+                {detalle && <p className="text-xs text-gray-400 mt-0.5">{detalle.motivo}</p>}
+              </div>
+              <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {loadingDetalle || !detalle ? (
+                <p className="text-center text-gray-400 text-sm py-8">Cargando...</p>
+              ) : (
+                <div className="space-y-2">
+                  {detalle.checklist.map((ci) => (
+                    <div key={ci.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                      <span className="text-sm text-gray-700">{ci.descripcion}</span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button type="button" onClick={() => setRespuesta(ci.id, true)}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${ci.respuesta === true ? "bg-green-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-green-100"}`}>
+                          Sí
+                        </button>
+                        <button type="button" onClick={() => setRespuesta(ci.id, false)}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${ci.respuesta === false ? "bg-red-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-red-100"}`}>
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {detalle && (
+              <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+                <button onClick={() => setDetalle(null)} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cerrar</button>
+                <button onClick={handleSaveChecklist} disabled={savingChecklist} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
+                  {savingChecklist ? "Guardando..." : "Guardar checklist"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

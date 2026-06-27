@@ -10,8 +10,9 @@ import { AccountMenu } from "@/components/AccountMenu";
 
 const navItems = [
   { href: "/dashboard",    label: "Dashboard",    icon: "⊞" },
-  { href: "/articulos",    label: "Artículos",    icon: "📦", badge: "stockBajo" },
   { href: "/clientes",     label: "Clientes",     icon: "👤" },
+  { href: "/ordenes",      label: "Órdenes",      icon: "🔧" },
+  { href: "/articulos",    label: "Artículos",    icon: "📦", badge: "stockBajo" },
   { href: "/proveedores",  label: "Proveedores",  icon: "🏭" },
   { href: "/ventas",       label: "Ventas",       icon: "💰" },
   { href: "/presupuestos", label: "Presupuestos", icon: "📋" },

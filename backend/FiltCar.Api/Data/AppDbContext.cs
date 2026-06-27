@@ -22,6 +22,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<Licencia> Licencias => Set<Licencia>();
+    public DbSet<Auto> Autos => Set<Auto>();
+    public DbSet<OrdenTrabajo> OrdenesTrabajo => Set<OrdenTrabajo>();
+    public DbSet<OrdenChecklistItem> OrdenChecklistItems => Set<OrdenChecklistItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

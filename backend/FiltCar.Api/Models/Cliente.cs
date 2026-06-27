@@ -13,4 +13,6 @@ public class Cliente
 
     public ICollection<Venta> Ventas { get; set; } = new List<Venta>();
     public ICollection<DeudaCliente> Deudas { get; set; } = new List<DeudaCliente>();
+    public ICollection<Auto> Autos { get; set; } = new List<Auto>();
+    public ICollection<OrdenTrabajo> Ordenes { get; set; } = new List<OrdenTrabajo>();
 }

@@ -1,0 +1,16 @@
+import { NextResponse } from "next/server";
+import { requireAuth, getCurrentUsername, proxyFetch } from "@/lib/server-auth";
+
+export async function PATCH(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
+
+  const username = await getCurrentUsername();
+  const { id } = await params;
+  const res = await proxyFetch(`/api/autos/${id}/toggle?username=${encodeURIComponent(username ?? "")}`, { method: "PATCH" });
+  const data = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
+}
