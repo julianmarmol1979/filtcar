@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Auto> Autos => Set<Auto>();
     public DbSet<OrdenTrabajo> OrdenesTrabajo => Set<OrdenTrabajo>();
     public DbSet<OrdenChecklistItem> OrdenChecklistItems => Set<OrdenChecklistItem>();
+    public DbSet<OrdenItem> OrdenItems => Set<OrdenItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,5 +84,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<PresupuestoItem>()
             .Property(pi => pi.Subtotal).HasPrecision(18, 2);
 
+        modelBuilder.Entity<OrdenItem>()
+            .Property(oi => oi.PrecioUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<OrdenItem>()
+            .Property(oi => oi.Subtotal).HasPrecision(18, 2);
     }
 }

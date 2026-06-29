@@ -93,6 +93,7 @@ public class OrdenesController(AppDbContext db, ActivityLogger logger) : Control
             .Include(o => o.Auto)
             .Include(o => o.Empleado)
             .Include(o => o.ChecklistItems.OrderBy(ci => ci.Posicion))
+            .Include(o => o.Items).ThenInclude(i => i.Articulo)
             .Where(o => o.Id == id)
             .Select(o => new
             {
@@ -111,6 +112,17 @@ public class OrdenesController(AppDbContext db, ActivityLogger logger) : Control
                 o.CreadaEn,
                 o.FinalizadaEn,
                 Checklist = o.ChecklistItems.Select(ci => new { ci.Id, ci.Descripcion, ci.Respuesta, ci.Posicion }),
+                Items = o.Items.Select(i => new
+                {
+                    i.Id,
+                    i.ArticuloId,
+                    Articulo = $"{i.Articulo.Marca} {i.Articulo.Modelo}",
+                    StockDisponible = i.Articulo.Stock,
+                    i.Cantidad,
+                    i.PrecioUnitario,
+                    i.Subtotal
+                }),
+                Total = o.Items.Sum(i => (decimal?)i.Subtotal) ?? 0,
             })
             .FirstOrDefaultAsync();
 
@@ -174,16 +186,90 @@ public class OrdenesController(AppDbContext db, ActivityLogger logger) : Control
     [HttpPatch("{id}/estado")]
     public async Task<IActionResult> UpdateEstado(int id, [FromBody] OrdenEstadoRequest req)
     {
-        var orden = await db.OrdenesTrabajo.Include(o => o.Auto).FirstOrDefaultAsync(o => o.Id == id);
+        var orden = await db.OrdenesTrabajo
+            .Include(o => o.Auto)
+            .Include(o => o.Items).ThenInclude(i => i.Articulo)
+            .FirstOrDefaultAsync(o => o.Id == id);
         if (orden is null) return NotFound();
 
         if (!EstadosValidos.Contains(req.Estado))
             return BadRequest(new { message = "Estado inválido" });
 
-        orden.Estado = req.Estado;
-        orden.FinalizadaEn = req.Estado is "Completada" or "Cancelada" ? DateTime.UtcNow : null;
+        var yaEstabaCompletada = orden.Estado == "Completada";
+        var pasaACompletada    = req.Estado == "Completada" && !yaEstabaCompletada;
 
-        logger.Log(req.Username, "OrdenEstado", $"Cambió la orden de \"{orden.Auto.Patente}\" a {req.Estado}");
+        // El stock se descuenta una sola vez, recién en la transición a Completada — nunca al crear/editar items.
+        if (pasaACompletada && orden.Items.Count > 0)
+        {
+            var faltantes = orden.Items
+                .Where(i => i.Articulo.Stock < i.Cantidad)
+                .Select(i => $"{i.Articulo.Marca} {i.Articulo.Modelo} (disponible: {i.Articulo.Stock}, requerido: {i.Cantidad})")
+                .ToList();
+
+            if (faltantes.Count > 0)
+                return BadRequest(new { message = $"Stock insuficiente para completar la orden: {string.Join("; ", faltantes)}" });
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync();
+        try
+        {
+            if (pasaACompletada)
+            {
+                foreach (var item in orden.Items)
+                    item.Articulo.Stock -= item.Cantidad;
+            }
+
+            orden.Estado = req.Estado;
+            orden.FinalizadaEn = req.Estado is "Completada" or "Cancelada" ? DateTime.UtcNow : null;
+
+            logger.Log(req.Username, "OrdenEstado", $"Cambió la orden de \"{orden.Auto.Patente}\" a {req.Estado}");
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            return Ok();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
+    // PUT /api/ordenes/{id}/items
+    [HttpPut("{id}/items")]
+    public async Task<IActionResult> UpdateItems(int id, [FromBody] OrdenItemsUpdateRequest req)
+    {
+        var orden = await db.OrdenesTrabajo
+            .Include(o => o.Auto)
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id);
+        if (orden is null) return NotFound();
+
+        if (orden.Estado is "Completada" or "Cancelada")
+            return BadRequest(new { message = "No se pueden modificar los artículos de una orden cerrada" });
+
+        db.OrdenItems.RemoveRange(orden.Items);
+
+        var nuevosItems = new List<OrdenItem>();
+        foreach (var itemReq in req.Items)
+        {
+            if (itemReq.Cantidad < 1)
+                return BadRequest(new { message = "La cantidad debe ser al menos 1" });
+
+            var articulo = await db.Articulos.FindAsync(itemReq.ArticuloId);
+            if (articulo is null)
+                return BadRequest(new { message = $"Artículo #{itemReq.ArticuloId} no encontrado" });
+
+            nuevosItems.Add(new OrdenItem
+            {
+                ArticuloId     = articulo.Id,
+                Cantidad       = itemReq.Cantidad,
+                PrecioUnitario = articulo.Precio,
+                Subtotal       = articulo.Precio * itemReq.Cantidad
+            });
+        }
+
+        orden.Items = nuevosItems;
+        logger.Log(req.Username, "OrdenItemsUpdate", $"Actualizó los artículos de la orden de \"{orden.Auto.Patente}\"");
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -239,3 +325,7 @@ public record OrdenEstadoRequest(string Estado, string? Username = null);
 public record ChecklistItemUpdate(int Id, bool? Respuesta);
 
 public record ChecklistUpdateRequest(List<ChecklistItemUpdate> Items, string? Username = null);
+
+public record OrdenItemRequest(int ArticuloId, int Cantidad);
+
+public record OrdenItemsUpdateRequest(List<OrdenItemRequest> Items, string? Username = null);

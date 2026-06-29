@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, X, Wrench, Search, Trash2, CheckSquare } from "lucide-react";
+import { Plus, X, Wrench, Search, Trash2, CheckSquare, Package } from "lucide-react";
 
 interface Cliente {
   id: number;
@@ -20,6 +20,25 @@ interface Empleado {
   id: number;
   nombre: string;
   apellido: string;
+}
+
+interface ArticuloOption {
+  id: number;
+  marca: string;
+  modelo: string;
+  precio: number;
+  stock: number;
+  activo: boolean;
+}
+
+interface ItemOrden {
+  id: number;
+  articuloId: number;
+  articulo: string;
+  stockDisponible: number;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
 }
 
 interface Orden {
@@ -45,6 +64,12 @@ interface ChecklistItem {
 
 interface OrdenDetail extends Orden {
   checklist: ChecklistItem[];
+  items: ItemOrden[];
+  total: number;
+}
+
+function fmt(n: number) {
+  return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
 }
 
 const ESTADOS = ["Pendiente", "EnProceso", "Completada", "Cancelada"] as const;
@@ -95,10 +120,15 @@ export default function OrdenesPage() {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
 
-  // Detail / checklist modal
+  // Detail modal (checklist + artículos)
   const [detalle, setDetalle]     = useState<OrdenDetail | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
+  const [detalleTab, setDetalleTab] = useState<"articulos" | "checklist">("articulos");
+  const [articulos, setArticulos] = useState<ArticuloOption[]>([]);
+  const [itemsForm, setItemsForm] = useState<{ articuloId: number; label: string; precio: number; stock: number; cantidad: number }[]>([]);
+  const [articuloToAdd, setArticuloToAdd] = useState<number | "">("");
+  const [savingItems, setSavingItems] = useState(false);
 
   const fetchOrdenes = useCallback(async () => {
     setLoading(true);
@@ -118,6 +148,7 @@ export default function OrdenesPage() {
   useEffect(() => {
     fetch("/api/clientes").then((r) => r.json()).then((d) => setClientes(Array.isArray(d) ? d : []));
     fetch("/api/empleados").then((r) => r.json()).then((d) => setEmpleados(Array.isArray(d) ? d : []));
+    fetch("/api/articulos").then((r) => r.json()).then((d) => setArticulos(Array.isArray(d) ? d.filter((a: ArticuloOption) => a.activo) : []));
   }, []);
 
   useEffect(() => {
@@ -187,12 +218,18 @@ export default function OrdenesPage() {
   }
 
   async function handleEstadoChange(o: Orden, estado: string) {
-    await fetch(`/api/ordenes/${o.id}/estado`, {
+    const res = await fetch(`/api/ordenes/${o.id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.message ?? "No se pudo cambiar el estado de la orden");
+      return;
+    }
     setOrdenes((prev) => prev.map((x) => (x.id === o.id ? { ...x, estado } : x)));
+    if (detalle?.id === o.id) await openDetalle(o);
   }
 
   async function handleDelete(o: Orden) {
@@ -204,11 +241,62 @@ export default function OrdenesPage() {
   async function openDetalle(o: Orden) {
     setLoadingDetalle(true);
     setDetalle(null);
+    setDetalleTab("articulos");
     try {
       const res  = await fetch(`/api/ordenes/${o.id}`);
-      const data = await res.json();
+      const data: OrdenDetail = await res.json();
       setDetalle(data);
+      setItemsForm(data.items.map((i) => ({
+        articuloId: i.articuloId,
+        label: i.articulo,
+        precio: i.precioUnitario,
+        stock: i.stockDisponible,
+        cantidad: i.cantidad,
+      })));
     } finally { setLoadingDetalle(false); }
+  }
+
+  const ordenCerrada = detalle?.estado === "Completada" || detalle?.estado === "Cancelada";
+
+  const articulosDisponibles = articulos.filter(
+    (a) => !itemsForm.find((i) => i.articuloId === a.id)
+  );
+
+  function handleAddArticulo(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = parseInt(e.target.value);
+    if (!id) return;
+    const art = articulos.find((a) => a.id === id);
+    if (!art) return;
+    setItemsForm((prev) => [
+      ...prev,
+      { articuloId: art.id, label: `${art.marca} ${art.modelo}`, precio: art.precio, stock: art.stock, cantidad: 1 },
+    ]);
+    setArticuloToAdd("");
+  }
+
+  function updateItemCantidad(articuloId: number, val: string) {
+    const n = parseInt(val);
+    setItemsForm((prev) => prev.map((i) => (i.articuloId === articuloId ? { ...i, cantidad: isNaN(n) || n < 1 ? 1 : n } : i)));
+  }
+
+  function removeItemForm(articuloId: number) {
+    setItemsForm((prev) => prev.filter((i) => i.articuloId !== articuloId));
+  }
+
+  async function handleSaveItems() {
+    if (!detalle) return;
+    setSavingItems(true);
+    try {
+      const res = await fetch(`/api/ordenes/${detalle.id}/items`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: itemsForm.map((i) => ({ articuloId: i.articuloId, cantidad: i.cantidad })) }),
+      });
+      if (res.ok) {
+        await openDetalle(detalle);
+        fetchOrdenes();
+      }
+    } finally { setSavingItems(false); }
   }
 
   function setRespuesta(itemId: number, respuesta: boolean) {
@@ -307,7 +395,7 @@ export default function OrdenesPage() {
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-3">
                         <button onClick={() => openDetalle(o)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
-                          <CheckSquare className="w-3.5 h-3.5" /> Checklist
+                          <Package className="w-3.5 h-3.5" /> Detalle
                         </button>
                         <button onClick={() => handleDelete(o)} className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
@@ -431,11 +519,11 @@ export default function OrdenesPage() {
         </div>
       )}
 
-      {/* ── Detail / checklist modal ─────────────────────────────────────────── */}
+      {/* ── Detail modal: artículos + checklist ──────────────────────────────── */}
       {(detalle || loadingDetalle) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDetalle(null)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
@@ -446,9 +534,103 @@ export default function OrdenesPage() {
               <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
+            {detalle && (
+              <div className="flex border-b border-gray-100 px-6">
+                <button
+                  onClick={() => setDetalleTab("articulos")}
+                  className={`flex items-center gap-1.5 py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors ${
+                    detalleTab === "articulos" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Package className="w-4 h-4" /> Artículos ({detalle.items.length})
+                </button>
+                <button
+                  onClick={() => setDetalleTab("checklist")}
+                  className={`flex items-center gap-1.5 py-3 px-1 text-sm font-semibold border-b-2 transition-colors ${
+                    detalleTab === "checklist" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <CheckSquare className="w-4 h-4" /> Checklist
+                </button>
+              </div>
+            )}
+
             <div className="overflow-y-auto flex-1 px-6 py-4">
               {loadingDetalle || !detalle ? (
                 <p className="text-center text-gray-400 text-sm py-8">Cargando...</p>
+              ) : detalleTab === "articulos" ? (
+                <div>
+                  {ordenCerrada && (
+                    <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3">
+                      {detalle.estado === "Completada"
+                        ? "Orden completada — el stock ya fue descontado y los artículos no se pueden modificar."
+                        : "Orden cancelada — los artículos no se pueden modificar."}
+                    </p>
+                  )}
+                  {itemsForm.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">Todavía no se agregaron artículos</p>
+                  ) : (
+                    <table className="w-full text-sm mb-3">
+                      <thead>
+                        <tr className="text-xs text-gray-500 border-b border-gray-100">
+                          <th className="text-left pb-2 font-semibold">Artículo</th>
+                          <th className="text-center pb-2 font-semibold w-20">Cant.</th>
+                          <th className="text-right pb-2 font-semibold">Precio</th>
+                          <th className="text-right pb-2 font-semibold">Subtotal</th>
+                          {!ordenCerrada && <th className="w-8"></th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {itemsForm.map((item) => (
+                          <tr key={item.articuloId}>
+                            <td className="py-2 font-medium text-gray-900 pr-2">
+                              {item.label}
+                              {!ordenCerrada && <span className="text-xs text-gray-400 ml-1">(stock: {item.stock})</span>}
+                            </td>
+                            <td className="py-2 text-center">
+                              {ordenCerrada ? item.cantidad : (
+                                <input type="number" min={1} value={item.cantidad}
+                                  onChange={(e) => updateItemCantidad(item.articuloId, e.target.value)}
+                                  className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              )}
+                            </td>
+                            <td className="py-2 text-right text-gray-600">{fmt(item.precio)}</td>
+                            <td className="py-2 text-right font-semibold text-gray-900">{fmt(item.precio * item.cantidad)}</td>
+                            {!ordenCerrada && (
+                              <td className="py-2 pl-2">
+                                <button type="button" onClick={() => removeItemForm(item.articuloId)} className="text-gray-300 hover:text-red-500 transition-colors">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {!ordenCerrada && (
+                    articulosDisponibles.length > 0 ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <select value={articuloToAdd} onChange={handleAddArticulo}
+                          className="flex-1 border border-dashed border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                          <option value="">Agregar artículo...</option>
+                          {articulosDisponibles.map((a) => (
+                            <option key={a.id} value={a.id}>{a.marca} {a.modelo} — {fmt(a.precio)} (stock: {a.stock})</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 text-center mt-2">Todos los artículos disponibles fueron agregados</p>
+                    )
+                  )}
+
+                  <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-100 mt-3 pt-3">
+                    <span>Total</span>
+                    <span className="text-blue-600">{fmt(itemsForm.reduce((s, i) => s + i.precio * i.cantidad, 0))}</span>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {detalle.checklist.map((ci) => (
@@ -473,9 +655,17 @@ export default function OrdenesPage() {
             {detalle && (
               <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
                 <button onClick={() => setDetalle(null)} className="flex-1 border border-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cerrar</button>
-                <button onClick={handleSaveChecklist} disabled={savingChecklist} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
-                  {savingChecklist ? "Guardando..." : "Guardar checklist"}
-                </button>
+                {detalleTab === "articulos" ? (
+                  !ordenCerrada && (
+                    <button onClick={handleSaveItems} disabled={savingItems} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
+                      {savingItems ? "Guardando..." : "Guardar artículos"}
+                    </button>
+                  )
+                ) : (
+                  <button onClick={handleSaveChecklist} disabled={savingChecklist} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-60">
+                    {savingChecklist ? "Guardando..." : "Guardar checklist"}
+                  </button>
+                )}
               </div>
             )}
           </div>
