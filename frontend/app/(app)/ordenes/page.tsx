@@ -124,7 +124,12 @@ export default function OrdenesPage() {
     if (!form.clienteId) { setAutosCliente([]); return; }
     fetch(`/api/autos?clienteId=${form.clienteId}`)
       .then((r) => r.json())
-      .then((d) => setAutosCliente(Array.isArray(d) ? d.filter((a: { activo: boolean }) => a.activo) : []));
+      .then((d) => {
+        const activos = Array.isArray(d) ? d.filter((a: { activo: boolean }) => a.activo) : [];
+        setAutosCliente(activos);
+        // Si el cliente no tiene vehículos cargados, pasamos directo al alta — no hay nada para elegir.
+        setNuevoAuto(activos.length === 0);
+      });
   }, [form.clienteId]);
 
   function openCreate() {
@@ -340,9 +345,9 @@ export default function OrdenesPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-semibold text-gray-700">Vehículo <span className="text-red-500">*</span></label>
-                  {form.clienteId && (
+                  {form.clienteId && autosCliente.length > 0 && (
                     <button type="button" onClick={() => setNuevoAuto(!nuevoAuto)} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
-                      {nuevoAuto ? "Elegir existente" : "+ Vehículo nuevo"}
+                      {nuevoAuto ? "Elegir uno existente" : "+ Vehículo nuevo"}
                     </button>
                   )}
                 </div>
@@ -356,16 +361,30 @@ export default function OrdenesPage() {
                     ))}
                   </select>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    <input type="text" placeholder="Patente *" value={nuevoAutoForm.patente}
-                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, patente: e.target.value })}
-                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="text" placeholder="Marca" value={nuevoAutoForm.marca}
-                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, marca: e.target.value })}
-                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="text" placeholder="Modelo" value={nuevoAutoForm.modelo}
-                      onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, modelo: e.target.value })}
-                      className="col-span-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    {form.clienteId && autosCliente.length === 0 && (
+                      <p className="text-xs text-gray-500 mb-3">Este cliente todavía no tiene vehículos registrados. Cargá los datos para agregarlo:</p>
+                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Patente <span className="text-red-500">*</span></label>
+                        <input type="text" placeholder="AB123CD" value={nuevoAutoForm.patente}
+                          onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, patente: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Marca</label>
+                        <input type="text" placeholder="Ford" value={nuevoAutoForm.marca}
+                          onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, marca: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Modelo</label>
+                        <input type="text" placeholder="Fiesta" value={nuevoAutoForm.modelo}
+                          onChange={(e) => setNuevoAutoForm({ ...nuevoAutoForm, modelo: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
