@@ -176,6 +176,11 @@ public class VentasController(AppDbContext db, ActivityLogger logger) : Controll
             await tx.CommitAsync();
             return Ok(new { venta.Id, venta.Total, venta.Fecha });
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            await tx.RollbackAsync();
+            return Conflict(new { message = "El stock de un artículo cambió mientras se registraba la venta. Verificá las cantidades disponibles y volvé a intentar." });
+        }
         catch
         {
             await tx.RollbackAsync();

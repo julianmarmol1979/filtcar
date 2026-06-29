@@ -132,6 +132,11 @@ public class ComprasController(AppDbContext db, ActivityLogger logger) : Control
 
             return Ok(new { compra.Id, compra.Total, compra.Fecha });
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            await tx.RollbackAsync();
+            return Conflict(new { message = "El stock de un artículo cambió mientras se registraba la compra. Volvé a intentar." });
+        }
         catch
         {
             await tx.RollbackAsync();

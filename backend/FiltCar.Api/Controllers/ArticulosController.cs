@@ -75,7 +75,14 @@ public class ArticulosController(AppDbContext db, ActivityLogger logger) : Contr
         articulo.Precio      = req.Precio;
 
         logger.Log(req.Username, "ArticuloUpdate", $"Actualizó el artículo \"{articulo.Marca} {articulo.Modelo}\"");
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Otra operación modificó este artículo al mismo tiempo. Refrescá la lista y volvé a guardar." });
+        }
         return Ok(articulo);
     }
 

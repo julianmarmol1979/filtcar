@@ -35,6 +35,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Property(a => a.Precio)
             .HasPrecision(18, 2);
 
+        // Concurrencia optimista sobre el stock: usa la columna de sistema xmin de Postgres.
+        // Si dos operaciones modifican el mismo artículo a la vez (dos ventas, una venta y una
+        // orden completándose, o doble clic en "Completar"), la segunda recibe un conflicto en
+        // lugar de pisar el stock de la primera — evita la sobreventa y el doble descuento.
+        // Solo aplica en Postgres: xmin es una columna de sistema propia de PG. Los tests usan
+        // SQLite (que no la tiene) y por eso el mapeo se omite ahí.
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.Entity<Articulo>()
+                .Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+        }
+
         modelBuilder.Entity<Venta>()
             .Property(v => v.Total).HasPrecision(18, 2);
         modelBuilder.Entity<Venta>()

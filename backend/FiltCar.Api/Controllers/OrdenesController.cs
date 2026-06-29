@@ -227,6 +227,11 @@ public class OrdenesController(AppDbContext db, ActivityLogger logger) : Control
             await tx.CommitAsync();
             return Ok();
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            await tx.RollbackAsync();
+            return Conflict(new { message = "El stock de un artículo cambió mientras se completaba la orden. Refrescá la orden y volvé a intentar." });
+        }
         catch
         {
             await tx.RollbackAsync();
