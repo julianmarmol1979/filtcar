@@ -46,9 +46,9 @@ public class OrdenesController(AppDbContext db, ActivityLogger logger) : Control
         if (autoId is int aid) query = query.Where(o => o.AutoId == aid);
         if (!string.IsNullOrWhiteSpace(estado)) query = query.Where(o => o.Estado == estado);
         if (DateOnly.TryParse(from, out var fromDate))
-            query = query.Where(o => o.Fecha.Date >= fromDate.ToDateTime(TimeOnly.MinValue).Date);
+            query = query.Where(o => o.Fecha.Date >= fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).Date);
         if (DateOnly.TryParse(to, out var toDate))
-            query = query.Where(o => o.Fecha.Date <= toDate.ToDateTime(TimeOnly.MaxValue).Date);
+            query = query.Where(o => o.Fecha.Date <= toDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc).Date);
 
         if (!string.IsNullOrWhiteSpace(search))
         {

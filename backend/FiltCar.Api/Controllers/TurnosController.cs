@@ -20,10 +20,10 @@ public class TurnosController(AppDbContext db, ActivityLogger logger) : Controll
             .AsQueryable();
 
         if (DateOnly.TryParse(from, out var fromDate))
-            query = query.Where(t => t.Fecha.Date >= fromDate.ToDateTime(TimeOnly.MinValue).Date);
+            query = query.Where(t => t.Fecha.Date >= fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).Date);
 
         if (DateOnly.TryParse(to, out var toDate))
-            query = query.Where(t => t.Fecha.Date <= toDate.ToDateTime(TimeOnly.MaxValue).Date);
+            query = query.Where(t => t.Fecha.Date <= toDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc).Date);
 
         var turnos = await query
             .OrderBy(t => t.Fecha)
